@@ -261,8 +261,10 @@ public final class Kaki extends JavaPlugin {
     // 批量创建文件夹
     boolean buildFolder(String game) {
         Role_JOSNIO roleIO = null;
-        if (game.equals("原神")) roleIO = new Role_JOSNIO("./src/config/roleData_Genshin.json");
-        else if (game.equals("崩3")) roleIO = new Role_JOSNIO("./src/config/roleData_Honkai.json");
+        //if (game.equals("原神")) roleIO = new Role_JOSNIO("./src/config/roleData_Genshin.json");
+        //else if (game.equals("崩3")) roleIO = new Role_JOSNIO("./src/config/roleData_Honkai.json");
+        if (game.equals("原神")) roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
+        else if (game.equals("崩3")) roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Honkai.json");
         if (roleIO == null) return false;
         JSONArray roleData = roleIO.getJsonArray();
         if (roleData == null) {
@@ -272,7 +274,7 @@ public final class Kaki extends JavaPlugin {
         int n = roleData.length();
         for (int i = 0; i < n; i++) {
             String name = roleData.getJSONObject(i).getString("名称");
-            File file = new File("./src/config/picture/" + game + "/" + name);
+            File file = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + name);
             if (!file.exists()) {
                 if (file.mkdirs()) System.out.println("已创建文件夹：" + name);
                 else return false;
@@ -283,7 +285,7 @@ public final class Kaki extends JavaPlugin {
 
     // 加载图片数量
     void loadImage(String name, String game) {
-        File[] files = new File("./src/config/picture/" + game + "/" + name).listFiles();
+        File[] files = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + name).listFiles();
         if (files == null) fileNum.put(name, 0);
         else fileNum.put(name, files.length);
     }
@@ -293,10 +295,10 @@ public final class Kaki extends JavaPlugin {
         String g = "";
         if (game.equals("原神")) {
             g = "一位角色";
-            person.status = new GuessStatus(title, "./src/config/roleData_Genshin.json");
+            person.status = new GuessStatus(title, "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
         } else if (game.equals("崩3")) {
             g = "一件装甲";
-            person.status = new GuessStatus(title, "./src/config/roleData_Honkai.json");
+            person.status = new GuessStatus(title, "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Honkai.json");
         }
         String[] answer = person.status.roleGuess.getAnswer();
         boolean details = event.getMessage().toString().contains("D") || event.getMessage().toString().contains("d");
@@ -310,8 +312,8 @@ public final class Kaki extends JavaPlugin {
         int imageNum = fileNum.get(answer[0]);
         Random random = new Random();
         int i = random.nextInt(imageNum) + 1;
-        File f = new File("./src/config/picture/" + game + "/" + answer[0] + "/" + i + ".jpg");
-        if (!f.exists()) f = new File("./src/config/picture/" + game + "/" + answer[0] + "/" + i + ".png");
+        File f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".jpg");
+        if (!f.exists()) f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".png");
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         StringBuilder str = new StringBuilder();
         for (int j = 0; j < answer.length; j++) {
@@ -449,7 +451,7 @@ public final class Kaki extends JavaPlugin {
                             return;
                         }
 
-                        Role_JOSNIO jsonIO = new Role_JOSNIO("./src/config/roleData_Genshin.json");
+                        Role_JOSNIO jsonIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
                         try {
                             if (jsonIO.jsonAdd(title, arr)) {
                                 jsonIO.jsonWrite();
@@ -485,8 +487,8 @@ public final class Kaki extends JavaPlugin {
 
     // 测试
     void test(MessageEvent event) {
-        File f = new File("./src/config/picture/原神/刻晴/9.jpg");
-        if (!f.exists()) f = new File("./src/config/picture/原神/刻晴/9.png");
+        File f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\原神\\刻晴\\9.jpg");
+        if (!f.exists()) f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\原神\\刻晴\\9.png");
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         event.getSubject().sendMessage(image);
     }
