@@ -17,6 +17,7 @@ class GuessStatus {
 
     String guess(String s) {
         String t = roleGuess.guess(s);
+        if (t == null) return null;
         if (t.startsWith("    ✔")) n = 100;
         else n++;
         str.append("\n");

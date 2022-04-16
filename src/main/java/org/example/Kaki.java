@@ -65,104 +65,144 @@ public final class Kaki extends JavaPlugin {
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
 
-            // 进程锁
-            if (userLock) {
-                event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
-            } else {
-                if (content.length() > 1)
-                    content = content.substring(1);
-                else
-                    content = "";
 
-                // 创建新进程
-                User user = new User(id);
-                String[] sentences = content.split(" ");
-                String[] title;
-                switch (sentences[0]) {
-                    case "help":
-                    case "帮助":
-                        if (sentences.length > 1) help(sentences[1], event);
-                        else help("", event);
-                        break;
-                    case "猜":
-                    case "猜D":
-                    case "猜d":
-                    case "猜原神":
-                    case "猜原神D":
-                    case "猜原神d":
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+            if (content.length() > 1)
+                content = content.substring(1);
+            else
+                content = "";
 
-                        System.out.println("outer: " + content);
-                        title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
-                        if (!Guess(event, user, title, "原神"))
-                            event.getSubject().sendMessage("获取数据失败");
+            // 创建新进程
+            User user = new User(id);
+            String[] sentences = content.split(" ");
+            String[] title;
+            switch (sentences[0]) {
+                case "help":
+                case "帮助":
+                    if (sentences.length > 1) help(sentences[1], event);
+                    else help("", event);
+                    break;
+                case "猜":
+                case "猜D":
+                case "猜d":
+                case "猜S":
+                case "猜s":
+                case "猜SD":
+                case "猜sd":
+                case "猜原神":
+                case "猜原神D":
+                case "猜原神d":
+                case "猜原神S":
+                case "猜原神s":
+                case "猜原神SD":
+                case "猜原神sd":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "猜崩3":
-                    case "猜崩3D":
-                    case "猜崩3d":
-                        // 更新进程锁状态
+                    }
+
+                    // 更新进程锁状态
+                    changeStatus(id, true);
+
+                    System.out.println("outer: " + content);
+                    title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
+                    if (!Guess(event, user, title, "原神"))
+                        event.getSubject().sendMessage("获取数据失败");
+                    break;
+                case "猜崩3":
+                case "猜崩3D":
+                case "猜崩3d":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
+                        break;
+                    }
+
+                    // 更新进程锁状态
                         /*changeStatus(id, true);
 
                         System.out.println("outer: " + content);
                         title = new String[]{"装甲", "角色", "评级", "武器", "归属"};
                         if (!Guess(event, user, title, "崩3"))
                             event.getSubject().sendMessage("获取数据失败");*/
+                    break;
+                case "添加原神角色":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "添加原神角色":
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+                    }
 
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else addRole("原神", event, user);
-                        break;
-                    case "添加崩3角色":
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+                    // 更新进程锁状态
+                    changeStatus(id, true);
 
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else addRole("崩3", event, user);
+                    System.out.println("白名单：" + white);
+                    System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(String.valueOf(event.getSender().getId())))
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    else addRole("原神", event, user);
+                    break;
+                case "添加崩3角色":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "创建原神文件夹":
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else {
-                            if (buildFolder("原神")) event.getSubject().sendMessage("创建文件夹成功");
-                            else event.getSubject().sendMessage("创建文件夹失败");
-                        }
+                    }
+
+                    // 更新进程锁状态
+                    changeStatus(id, true);
+
+                    System.out.println("白名单：" + white);
+                    System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(String.valueOf(event.getSender().getId())))
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    else addRole("崩3", event, user);
+                    break;
+                case "创建原神文件夹":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "创建崩3文件夹":
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else {
-                            if (buildFolder("崩3")) event.getSubject().sendMessage("创建文件夹成功");
-                            else event.getSubject().sendMessage("创建文件夹失败");
-                        }
+                    }
+
+                    System.out.println("白名单：" + white);
+                    System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(String.valueOf(event.getSender().getId())))
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    else {
+                        if (buildFolder("原神")) event.getSubject().sendMessage("创建文件夹成功");
+                        else event.getSubject().sendMessage("创建文件夹失败");
+                    }
+                    break;
+                case "创建崩3文件夹":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "图片重载":
-                        fileNum.clear();
-                        event.getSubject().sendMessage("图片重载成功");
-                        break;
-                    case "test":
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else
-                            test(event);
-                        break;
-                    default:
-                        System.out.println("default in \">\" order");
-                        break;
-                }
+                    }
+
+                    System.out.println("白名单：" + white);
+                    System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(String.valueOf(event.getSender().getId())))
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    else {
+                        if (buildFolder("崩3")) event.getSubject().sendMessage("创建文件夹成功");
+                        else event.getSubject().sendMessage("创建文件夹失败");
+                    }
+                    break;
+                case "图片重载":
+                    fileNum.clear();
+                    event.getSubject().sendMessage("图片重载成功");
+                    break;
+                case "test":
+                    if (!white.contains(String.valueOf(event.getSender().getId())))
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    else
+                        test(event);
+                    break;
+                default:
+                    System.out.println("default in \">\" order");
+                    break;
             }
         } else {
             respond(content, event);
@@ -263,8 +303,10 @@ public final class Kaki extends JavaPlugin {
         Role_JOSNIO roleIO = null;
         //if (game.equals("原神")) roleIO = new Role_JOSNIO("./src/config/roleData_Genshin.json");
         //else if (game.equals("崩3")) roleIO = new Role_JOSNIO("./src/config/roleData_Honkai.json");
-        if (game.equals("原神")) roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
-        else if (game.equals("崩3")) roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Honkai.json");
+        if (game.equals("原神"))
+            roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
+        else if (game.equals("崩3"))
+            roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Honkai.json");
         if (roleIO == null) return false;
         JSONArray roleData = roleIO.getJsonArray();
         if (roleData == null) {
@@ -313,7 +355,8 @@ public final class Kaki extends JavaPlugin {
         Random random = new Random();
         int i = random.nextInt(imageNum) + 1;
         File f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".jpg");
-        if (!f.exists()) f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".png");
+        if (!f.exists())
+            f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".png");
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         StringBuilder str = new StringBuilder();
         for (int j = 0; j < answer.length; j++) {
@@ -333,13 +376,18 @@ public final class Kaki extends JavaPlugin {
             person.status.n = 0; // 用MessageEvent时不需要跳过指令句
             person.listener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, e -> {
                 if (e.getMessage().contentToString().contains("取消") || e.getMessage().contentToString().contains("不玩了")) {
-                    person.listener.complete();
-                    e.getSubject().sendMessage("操作取消。正确答案是「" + answer[0] + "」");
-                    e.getSubject().sendMessage(role);
+                    String a = String.valueOf(e.getSender().getId());
+                    System.out.println(a);
+                    System.out.println(person.id);
+                    if (person.id.equals(String.valueOf(e.getSender().getId()))) {
+                        person.listener.complete();
+                        e.getSubject().sendMessage("操作取消。正确答案是「" + answer[0] + "」");
+                        e.getSubject().sendMessage(role);
 
-                    // 更新进程锁状态
-                    changeStatus(person.id, false);
-                    return;
+                        // 更新进程锁状态
+                        changeStatus(person.id, false);
+                        return;
+                    }
                 }
 
                 String id = String.valueOf(e.getSender().getId());
@@ -369,6 +417,7 @@ public final class Kaki extends JavaPlugin {
                                     ans = m.toString();
                                 }
                             }
+                            if (ans == null) return;
                             MessageChain message = new MessageChainBuilder().append(at).append("\n").append(ans).build();
                             // 防止消息轰炸
                             if (person.status.n >= 1 && person.status.n <= 5) e.getSubject().sendMessage(message);
@@ -386,6 +435,7 @@ public final class Kaki extends JavaPlugin {
                                     ans = m.toString();
                                 }
                             }
+                            if (ans == null) return;
                             // 防止消息轰炸
                             // n为5即失败，照样输出；因为正确时立刻赋值100，所以正确时不输出
                             if (person.status.n >= 1 && person.status.n <= 5) e.getSubject().sendMessage(ans);

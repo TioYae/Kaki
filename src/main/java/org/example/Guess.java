@@ -26,13 +26,10 @@ class Guess {
     // -1错误 0小于 1正确 2大于
     // 取消数值替代，合并分析数值步骤
     public String guess(String name) {
-        int l = title.length;
         JSONObject role = getInformation(name);
         StringBuilder str = new StringBuilder();
         if (role == null || this.role == null) {
-            for (int i = 0; i < l; i++) {
-                str.append("    ✘ ");
-            }
+            return null;
         } else {
             for (String s : title) {
                 if (role.getString(s).equals(this.role.getString(s)))
