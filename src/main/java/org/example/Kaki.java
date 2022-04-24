@@ -4,6 +4,7 @@ import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
 import net.mamoe.mirai.event.GlobalEventChannel;
+import net.mamoe.mirai.event.Listener;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.message.data.At;
 import net.mamoe.mirai.message.data.Image;
@@ -19,14 +20,15 @@ import java.util.*;
 public final class Kaki extends JavaPlugin {
     public static final Kaki INSTANCE = new Kaki();
 
-    public static final List<String> black = Arrays.asList(new String[]{});
-    public static final List<String> white = Arrays.asList("1246336370");
-    public static final List<String> group = Arrays.asList("1020335236", "745184152", "563125969");
+    public static final List<Long> black = Arrays.asList();
+    public static final List<Long> white = Arrays.asList(1246336370L, 2952514095L);
+    public static final List<Long> group = Arrays.asList(1020335236L, 745184152L, 563125969L);
     /*GenshinStatus status = null;// 群组可以试试哈希表存每个人的答题状态
     Listener listener = null;*/
     boolean roleLock = false;
     HashMap<String, Boolean> usersLock = new HashMap<>();
-    HashMap<String, Integer> fileNum = new HashMap<>();
+    HashMap<String, Integer> fileNum = new HashMap<>(); // 读取的图片数量
+    Listener mainListener; // 总监听
 
     private Kaki() {
         super(new JvmPluginDescriptionBuilder("org.example.Kaki", "1.0")
@@ -44,31 +46,62 @@ public final class Kaki extends JavaPlugin {
     public void onEnable() {
         getLogger().info("Plugin loaded!");
 
-        // todo 检测重启指令重启监听
-        GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
+        // 主监听
+        mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
+
+        // 重启监听等（开发者专用）
+        GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, event -> {
+            if (event.getSender().getId() == 1246336370L) {
+                if (event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]")) {
+                    String str = event.getMessage().contentToString();
+                    str = str.substring(12);
+                    switch (str) {
+                        case "重启":
+                        case "relogin":
+                        case "restart":
+                            mainListener.complete();
+                            mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
+                            event.getSubject().sendMessage("重启成功");
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        });
     }
 
     // 监听方法
     void hear(MessageEvent event) {
         String id = String.valueOf(event.getSender().getId());
         // 限定监听白名单的群
-        if (event.getClass().getName().contains("Group") && !group.contains(String.valueOf(event.getSubject().getId())))
+        if (event.getClass().getName().contains("Group") && !group.contains(event.getSubject().getId()))
             return;
         String content = event.getMessage().contentToString();
         System.out.println(content);
 
 
-        if (content.startsWith(">")) {
+        if (content.startsWith(">") || event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]")) {
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
             System.out.println(usersLock);
 
 
-            if (content.length() > 1)
-                content = content.substring(1);
-            else
-                content = "";
+            if (content.startsWith(">")) {
+                if (content.length() > 1)
+                    content = content.substring(1);
+                else
+                    content = "";
+            } else {
+                int t = 12;
+                if (content.charAt(11) != ' ') t--;
+                if (content.length() > t)
+                    content = content.substring(t);
+                else
+                    content = "";
+            }
+            System.out.println(content);
 
             // 进程锁
             if (userLock) {
@@ -137,7 +170,7 @@ public final class Kaki extends JavaPlugin {
 
                         System.out.println("白名单：" + white);
                         System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
+                        if (!white.contains(event.getSender().getId()))
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                         else addRole("原神", event, user);
                         break;
@@ -147,14 +180,14 @@ public final class Kaki extends JavaPlugin {
 
                         System.out.println("白名单：" + white);
                         System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
+                        if (!white.contains(event.getSender().getId()))
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                         else addRole("崩3", event, user);
                         break;
                     case "创建原神文件夹":
                         System.out.println("白名单：" + white);
                         System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
+                        if (!white.contains(event.getSender().getId()))
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                         else {
                             if (buildFolder("原神")) event.getSubject().sendMessage("创建文件夹成功");
@@ -164,7 +197,7 @@ public final class Kaki extends JavaPlugin {
                     case "创建崩3文件夹":
                         System.out.println("白名单：" + white);
                         System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
+                        if (!white.contains(event.getSender().getId()))
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                         else {
                             if (buildFolder("崩3")) event.getSubject().sendMessage("创建文件夹成功");
@@ -176,7 +209,7 @@ public final class Kaki extends JavaPlugin {
                         event.getSubject().sendMessage("图片重载成功");
                         break;
                     case "test":
-                        if (!white.contains(String.valueOf(event.getSender().getId())))
+                        if (!white.contains(event.getSender().getId()))
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                         else
                             test(event);
@@ -414,7 +447,7 @@ public final class Kaki extends JavaPlugin {
                             if (ans == null) return; // 输入不规范或抽取角色失败返回null
 
                             // 当输入规范时，重置计时器
-                            if(person.listener == null) return; // 若定时器已触发，结束监听
+                            if (person.listener == null) return; // 若定时器已触发，结束监听
                             person.timer.cancel(); // 关闭定时器
                             // 重置定时器
                             person.timer = new Timer();
@@ -445,7 +478,7 @@ public final class Kaki extends JavaPlugin {
                             if (ans == null) return; // 输入不规范或抽取角色失败返回null
 
                             // 当输入规范时，重置计时器
-                            if(person.listener == null) return; // 若定时器已触发，结束监听
+                            if (person.listener == null) return; // 若定时器已触发，结束监听
                             person.timer.cancel(); // 关闭定时器
                             // 重置定时器
                             person.timer = new Timer();
@@ -470,6 +503,8 @@ public final class Kaki extends JavaPlugin {
 
                         // 更新进程锁状态
                         changeStatus(person.id, false);
+                        person.timer.cancel(); // 关闭定时器
+                        person.timer = null; // 定时器置空
                     } else if (person.status.n >= 5) {
                         person.status.n = -100;
                         e.getSubject().sendMessage("猜错啦！正确答案是「" + answer[0] + "」");
@@ -479,6 +514,8 @@ public final class Kaki extends JavaPlugin {
 
                         // 更新进程锁状态
                         changeStatus(person.id, false);
+                        person.timer.cancel(); // 关闭定时器
+                        person.timer = null; // 定时器置空
                     }
                 }
             });
@@ -487,7 +524,7 @@ public final class Kaki extends JavaPlugin {
     }
 
     // 计时器运行内容
-    void timeout(User person, MessageEvent event, MessageChain role, String ans){
+    void timeout(User person, MessageEvent event, MessageChain role, String ans) {
         person.status.n = -100;
         if (!person.group && event.getClass().getName().contains("Group")) { // 群组消息且非群答要@
             At at = new At(event.getSender().getId());
