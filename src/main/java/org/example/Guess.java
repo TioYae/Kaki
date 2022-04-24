@@ -28,7 +28,7 @@ class Guess {
     public String guess(String name) {
         JSONObject role = getInformation(name);
         StringBuilder str = new StringBuilder();
-        if (role == null || this.role == null) {
+        if (role == null || this.role == null) { // 输入不规范或抽取角色失败返回null
             return null;
         } else {
             for (String s : title) {

@@ -31,7 +31,7 @@ class Role_JOSNIO {
             jsonStr = sb.toString();
 //            System.out.println(jsonStr);
             this.jsonArray = new JSONArray(jsonStr);
-            System.out.println(this.jsonArray);
+//            System.out.println(this.jsonArray);
         } catch (Exception e) {
         }
     }

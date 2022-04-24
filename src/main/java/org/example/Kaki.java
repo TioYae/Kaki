@@ -14,10 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public final class Kaki extends JavaPlugin {
     public static final Kaki INSTANCE = new Kaki();
@@ -47,6 +44,7 @@ public final class Kaki extends JavaPlugin {
     public void onEnable() {
         getLogger().info("Plugin loaded!");
 
+        // todo 检测重启指令重启监听
         GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
     }
 
@@ -360,7 +358,17 @@ public final class Kaki extends JavaPlugin {
                 event.getSubject().sendMessage(message);
             } else if (event.getClass().getName().contains("Friend")) // 好友消息不@
                 event.getSubject().sendMessage("已随机抽取" + g + "，请开始您的猜测 ^_^");
+
+            long delay = 10000L;
+            person.timer = new Timer();
+            person.timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    timeout(person, event, role, answer[0]);
+                }
+            }, delay);
             person.status.n = 0; // 用MessageEvent时不需要跳过指令句
+
             person.listener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, e -> {
                 if (e.getMessage().contentToString().contains("取消") || e.getMessage().contentToString().contains("不玩了")) {
                     if (person.id.equals(String.valueOf(e.getSender().getId())) || person.group) { // 对应的人或者是群答
@@ -370,6 +378,8 @@ public final class Kaki extends JavaPlugin {
 
                         // 更新进程锁状态
                         changeStatus(person.id, false);
+                        person.timer.cancel(); // 关闭定时器
+                        person.timer = null; // 定时器置空
                         return;
                     }
                 }
@@ -388,7 +398,7 @@ public final class Kaki extends JavaPlugin {
                         // 原因：风控，与代码无关
                         if (e.getClass().getName().contains("Group") && !person.group) { // 群组消息要@(非群答模式)
                             At at = new At(e.getSender().getId());
-                            String ans = person.status.guess(c);
+                            String ans = person.status.guess(c); // 获取猜的结果
                             // 追加角色详情
                             if (details) {
                                 JSONObject r = person.status.roleGuess.getInformation(c);
@@ -401,12 +411,25 @@ public final class Kaki extends JavaPlugin {
                                     ans = m.toString();
                                 }
                             }
-                            if (ans == null) return;
+                            if (ans == null) return; // 输入不规范或抽取角色失败返回null
+
+                            // 当输入规范时，重置计时器
+                            if(person.listener == null) return; // 若定时器已触发，结束监听
+                            person.timer.cancel(); // 关闭定时器
+                            // 重置定时器
+                            person.timer = new Timer();
+                            person.timer.schedule(new TimerTask() {
+                                @Override
+                                public void run() {
+                                    timeout(person, e, role, answer[0]);
+                                }
+                            }, delay);
+
                             MessageChain message = new MessageChainBuilder().append(at).append("\n").append(ans).build();
                             // 防止消息轰炸
                             if (person.status.n >= 1 && person.status.n <= 5) e.getSubject().sendMessage(message);
                         } else if (e.getClass().getName().contains("Friend") || person.group) { // 好友消息不@(群答模式)
-                            String ans = person.status.guess(c);
+                            String ans = person.status.guess(c); // 获取猜的结果
                             // 追加角色详情
                             if (details) {
                                 JSONObject r = person.status.roleGuess.getInformation(c);
@@ -419,7 +442,20 @@ public final class Kaki extends JavaPlugin {
                                     ans = m.toString();
                                 }
                             }
-                            if (ans == null) return;
+                            if (ans == null) return; // 输入不规范或抽取角色失败返回null
+
+                            // 当输入规范时，重置计时器
+                            if(person.listener == null) return; // 若定时器已触发，结束监听
+                            person.timer.cancel(); // 关闭定时器
+                            // 重置定时器
+                            person.timer = new Timer();
+                            person.timer.schedule(new TimerTask() {
+                                @Override
+                                public void run() {
+                                    timeout(person, e, role, answer[0]);
+                                }
+                            }, delay);
+
                             // 防止消息轰炸
                             // n为5即失败，照样输出；因为正确时立刻赋值100，所以正确时不输出
                             if (person.status.n >= 1 && person.status.n <= 5) e.getSubject().sendMessage(ans);
@@ -448,6 +484,27 @@ public final class Kaki extends JavaPlugin {
             });
         }
         return true;
+    }
+
+    // 计时器运行内容
+    void timeout(User person, MessageEvent event, MessageChain role, String ans){
+        person.status.n = -100;
+        if (!person.group && event.getClass().getName().contains("Group")) { // 群组消息且非群答要@
+            At at = new At(event.getSender().getId());
+            MessageChain message = new MessageChainBuilder().append(at).append("\n").append("应答超时！正确答案是「").append(ans).append("」").build();
+            event.getSubject().sendMessage(message);
+        } else if (person.group || event.getClass().getName().contains("Friend")) {// 好友消息或群答不@
+            event.getSubject().sendMessage("应答超时！正确答案是「" + ans + "」");
+        }
+        event.getSubject().sendMessage(role); // 发送角色详情
+
+        person.listener.complete(); // 停止监听
+        person.listener = null; // 监听置空，用于判断定时器是否已触发
+
+        // 更新进程锁状态
+        changeStatus(person.id, false);
+        person.timer.cancel(); // 关闭定时器
+        person.timer = null; // 定时器置空
     }
 
     // 新增角色
