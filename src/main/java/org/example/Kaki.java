@@ -359,7 +359,7 @@ public final class Kaki extends JavaPlugin {
             } else if (event.getClass().getName().contains("Friend")) // 好友消息不@
                 event.getSubject().sendMessage("已随机抽取" + g + "，请开始您的猜测 ^_^");
 
-            long delay = 10000L;
+            long delay = 60000L;
             person.timer = new Timer();
             person.timer.schedule(new TimerTask() {
                 @Override
