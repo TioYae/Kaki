@@ -15,6 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public final class Kaki extends JavaPlugin {
@@ -23,12 +24,13 @@ public final class Kaki extends JavaPlugin {
     public static final List<Long> black = Arrays.asList();
     public static final List<Long> white = Arrays.asList(1246336370L, 2952514095L);
     public static final List<Long> group = Arrays.asList(1020335236L, 745184152L, 563125969L);
-    /*GenshinStatus status = null;// 群组可以试试哈希表存每个人的答题状态
-    Listener listener = null;*/
-    boolean roleLock = false;
-    HashMap<String, Boolean> usersLock = new HashMap<>();
-    HashMap<String, Integer> fileNum = new HashMap<>(); // 读取的图片数量
+    long masterId = 1246336370L; // 最高管理者id
+
+    boolean roleLock = false; // 角色添加(文件IO)时上锁
     Listener mainListener; // 总监听
+    HashMap<Long, Boolean> usersLock = new HashMap<>(); // 用户指令锁
+    HashMap<String, Integer> fileNum = new HashMap<>(); // 读取的图片数量
+    Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为10，可到logAdd处修改
 
     private Kaki() {
         super(new JvmPluginDescriptionBuilder("org.example.Kaki", "1.0")
@@ -49,19 +51,40 @@ public final class Kaki extends JavaPlugin {
         // 主监听
         mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
 
-        // 重启监听等（开发者专用）
+        // 交互式控制台（开发者专用）
         GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, event -> {
-            if (event.getSender().getId() == 1246336370L) {
-                if (event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]")) {
-                    String str = event.getMessage().contentToString();
-                    str = str.substring(12);
+            if (event.getSender().getId() == masterId) {
+                boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]");
+                String str = event.getMessage().contentToString();
+                if (at || str.startsWith(">") || str.startsWith(" ")) {
+                    if (at) str = str.substring(12);
+                    else str = str.substring(1);
                     switch (str) {
                         case "重启":
                         case "relogin":
                         case "restart":
                             mainListener.complete();
+                            usersLock.clear();
                             mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
                             event.getSubject().sendMessage("重启成功");
+                            break;
+                        case "报错":
+                        case "log":
+                        case "error":
+                            logSend(event);
+                            break;
+                        case "用户锁":
+                        case "lock":
+                        case "usersLock":
+                            event.getSubject().sendMessage(usersLock.toString());
+                            break;
+                        case "黑名单":
+                        case "black":
+                            event.getSubject().sendMessage(black.toString());
+                            break;
+                        case "白名单":
+                        case "white":
+                            event.getSubject().sendMessage(white.toString());
                             break;
                         default:
                             break;
@@ -73,7 +96,7 @@ public final class Kaki extends JavaPlugin {
 
     // 监听方法
     void hear(MessageEvent event) {
-        String id = String.valueOf(event.getSender().getId());
+        long id = event.getSender().getId();
         // 限定监听白名单的群
         if (event.getClass().getName().contains("Group") && !group.contains(event.getSubject().getId()))
             return;
@@ -85,7 +108,8 @@ public final class Kaki extends JavaPlugin {
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
-            System.out.println(usersLock);
+            logAdd(id + "的状态锁: " + userLock);
+            System.out.println("usersLock: " + usersLock);
 
 
             if (content.startsWith(">")) {
@@ -102,6 +126,7 @@ public final class Kaki extends JavaPlugin {
                     content = "";
             }
             System.out.println(content);
+            logAdd("处理后的内容：" + content);
 
             // 进程锁
             if (userLock) {
@@ -135,7 +160,7 @@ public final class Kaki extends JavaPlugin {
                     case "猜原神":
                         // 群答模式id为群号
                         if ((content.contains("g") || content.contains("G")) && event.getClass().getName().contains("Group")) {
-                            id = String.valueOf(event.getSubject().getId());
+                            id = event.getSubject().getId();
                             user = new User(id);
                             user.group = true;
                         }
@@ -143,7 +168,7 @@ public final class Kaki extends JavaPlugin {
                         // 更新进程锁状态
                         changeStatus(id, true);
 
-                        System.out.println("outer: " + content);
+//                        System.out.println("outer: " + content);
                         title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
                         if (!Guess(event, user, title, "原神"))
                             event.getSubject().sendMessage("获取数据失败");
@@ -168,38 +193,42 @@ public final class Kaki extends JavaPlugin {
                         // 更新进程锁状态
                         changeStatus(id, true);
 
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId()))
+//                        System.out.println("白名单：" + white);
+//                        System.out.println("请求人：" + event.getSender().getId());
+                        if (!white.contains(event.getSender().getId())) {
+                            logAdd(event.getSender().getId() + "没有添加角色的权限");
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else addRole("原神", event, user);
+                        } else addRole("原神", event, user);
                         break;
                     case "添加崩3角色":
                         // 更新进程锁状态
                         changeStatus(id, true);
 
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId()))
+//                        System.out.println("白名单：" + white);
+//                        System.out.println("请求人：" + event.getSender().getId());
+                        if (!white.contains(event.getSender().getId())) {
+                            logAdd(event.getSender().getId() + "没有添加角色的权限");
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else addRole("崩3", event, user);
+                        } else addRole("崩3", event, user);
                         break;
                     case "创建原神文件夹":
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId()))
+//                        System.out.println("白名单：" + white);
+//                        System.out.println("请求人：" + event.getSender().getId());
+                        if (!white.contains(event.getSender().getId())) {
+                            logAdd(event.getSender().getId() + "没有创建文件夹的权限");
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else {
+                        } else {
                             if (buildFolder("原神")) event.getSubject().sendMessage("创建文件夹成功");
                             else event.getSubject().sendMessage("创建文件夹失败");
                         }
                         break;
                     case "创建崩3文件夹":
-                        System.out.println("白名单：" + white);
-                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId()))
+//                        System.out.println("白名单：" + white);
+//                        System.out.println("请求人：" + event.getSender().getId());
+                        if (!white.contains(event.getSender().getId())) {
+                            logAdd(event.getSender().getId() + "没有创建文件夹的权限");
                             event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else {
+                        } else {
                             if (buildFolder("崩3")) event.getSubject().sendMessage("创建文件夹成功");
                             else event.getSubject().sendMessage("创建文件夹失败");
                         }
@@ -219,14 +248,42 @@ public final class Kaki extends JavaPlugin {
                         break;
                 }
             }
-        } else {
-            respond(content, event);
         }
+        respond(content, event);
+    }
+
+    // 添加错误记录
+    void logAdd(String err) {
+        Date date = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        if (logMessages.size() >= 10) {
+            logMessages.poll();
+        }
+        logMessages.offer(dateFormat.format(date) + "\n" + err);
+    }
+
+    // 给开发者发送错误记录
+    void logSend(MessageEvent event) {
+        int n = logMessages.size();
+        if (n == 0) {
+            event.getSubject().sendMessage("无错误记录");
+            return;
+        }
+        StringBuilder message = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            String t = logMessages.poll();
+            if (i != 0) message.append("\n");
+            message.append(t);
+        }
+        event.getSubject().sendMessage(message.toString());
     }
 
     // 更改对应用户的状态
-    boolean changeStatus(String id, boolean lock) {
-        if (id.equals("")) return false;
+    boolean changeStatus(long id, boolean lock) {
+        if (id == -1) {
+            logAdd("修改用户状态时获取id失败");
+            return false;
+        }
         usersLock.remove(id);
         usersLock.put(id, lock);
         return true;
@@ -254,15 +311,27 @@ public final class Kaki extends JavaPlugin {
             event.getSubject().sendMessage("晚安");
         }
 
-        //带称呼触发
-        if (content.startsWith("Kaki") || content.startsWith("kaki")) {
-            if (content.length() > 4)
-                content = content.substring(4);
-            else
-                content = "";
+        boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]");
+        //带称呼或@触发
+        if (content.startsWith("Kaki") || content.startsWith("kaki") || at) {
+            if (at) {
+                int t = 12;
+                if (content.charAt(11) != ' ') t--;
+                if (content.length() > t)
+                    content = content.substring(t);
+                else
+                    content = "";
+            }
+            else {
+                if(content.length() > 4)
+                    content = content.substring(4);
+                else
+                    content = "";
+            }
+
             System.out.println(content);
 
-            if (content.equals("")) {
+            if (content.equals("") || content.contains("在不在")) {
                 event.getSubject().sendMessage("咋了？");
             }
 
@@ -280,10 +349,11 @@ public final class Kaki extends JavaPlugin {
                 System.out.println("输出帮助列表");
                 ans = "目前存在的指令操作如下：\n" +
                         ">猜原神（>猜）\n" +
-                        ">猜崩3（未启用）\n" +
+//                        ">猜崩3（未启用）\n" +
                         ">添加原神角色\n" +
-                        ">添加崩3角色（未启用）\n" +
-                        "\n可以通过输入「>帮助 指令名」来获取更多帮助";
+//                        ">添加崩3角色（未启用）\n" +
+                        "\n可以通过输入「>帮助 指令名」来获取更多帮助" +
+                        "\n在群聊中可以通过「@Kaki」取代「>」符号";
                 break;
             case "猜":
             case "猜原神":
@@ -327,6 +397,7 @@ public final class Kaki extends JavaPlugin {
         JSONArray roleData = roleIO.getJsonArray();
         if (roleData == null) {
             System.out.println("空数据");
+            logAdd("读取角色数据失败");
             return false;
         }
         int n = roleData.length();
@@ -334,8 +405,10 @@ public final class Kaki extends JavaPlugin {
             String name = roleData.getJSONObject(i).getString("名称");
             File file = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + name);
             if (!file.exists()) {
-                if (file.mkdirs()) System.out.println("已创建文件夹：" + name);
-                else return false;
+                if (file.mkdirs()) {
+                    System.out.println("已创建文件夹：" + name);
+                    logAdd("已创建文件夹：" + name);
+                } else return false;
             }
         }
         return true;
@@ -362,6 +435,7 @@ public final class Kaki extends JavaPlugin {
         boolean details = event.getMessage().toString().contains("D") || event.getMessage().toString().contains("d");
         if (answer == null) {
             System.out.println("读取数据为空");
+            logAdd("读取角色数据失败");
             return false;
         }
 
@@ -370,9 +444,10 @@ public final class Kaki extends JavaPlugin {
         int imageNum = fileNum.get(answer[0]);
         Random random = new Random();
         int i = random.nextInt(imageNum) + 1;
-        File f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".jpg");
-        if (!f.exists())
-            f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i + ".png");
+        String pathname = "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i;
+        File f = new File(pathname + ".jpg");
+        if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+            f = new File(pathname + ".png");
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         StringBuilder str = new StringBuilder();
         for (int j = 0; j < answer.length; j++) {
@@ -404,7 +479,7 @@ public final class Kaki extends JavaPlugin {
 
             person.listener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, e -> {
                 if (e.getMessage().contentToString().contains("取消") || e.getMessage().contentToString().contains("不玩了")) {
-                    if (person.id.equals(String.valueOf(e.getSender().getId())) || person.group) { // 对应的人或者是群答
+                    if (person.id == e.getSender().getId() || person.group) { // 对应的人或者是群答
                         person.listener.complete();
                         e.getSubject().sendMessage("操作取消。正确答案是「" + answer[0] + "」");
                         e.getSubject().sendMessage(role);
@@ -417,9 +492,9 @@ public final class Kaki extends JavaPlugin {
                     }
                 }
 
-                String id = String.valueOf(e.getSender().getId());
+                long id = e.getSender().getId();
                 // 判断为同一个人的消息才执行 (或群答)
-                if (person.id.equals(id) || person.group) {
+                if (person.id == id || person.group) {
                     String c = e.getMessage().contentToString();
                     System.out.println(person.status.n + ": inner: " + c);
 
@@ -445,6 +520,7 @@ public final class Kaki extends JavaPlugin {
                                 }
                             }
                             if (ans == null) return; // 输入不规范或抽取角色失败返回null
+                            logAdd("输入不规范或读取角色数据失败");
 
                             // 当输入规范时，重置计时器
                             if (person.listener == null) return; // 若定时器已触发，结束监听
@@ -476,6 +552,7 @@ public final class Kaki extends JavaPlugin {
                                 }
                             }
                             if (ans == null) return; // 输入不规范或抽取角色失败返回null
+                            logAdd("输入不规范或读取角色数据失败");
 
                             // 当输入规范时，重置计时器
                             if (person.listener == null) return; // 若定时器已触发，结束监听
@@ -558,11 +635,12 @@ public final class Kaki extends JavaPlugin {
                 event.getSubject().sendMessage("请输入「名称,星级,性别,属性,武器,归属」，用中/英文逗号隔开，不支持空格");
                 person.listener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, e -> {
                     // 判断为同一个人的消息才执行
-                    if (String.valueOf(e.getSender().getId()).equals(person.id)) {
+                    if (e.getSender().getId() == person.id) {
                         roleLock = true; // MessageEvent
                         String c = e.getMessage().contentToString();
                         String[] title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
                         System.out.println("addRole: " + c);
+                        logAdd("添加角色：" + c);
                         String[] arr = c.split(",|，");
                         if (title.length != arr.length) {
                             if (arr[0].equals("取消")) {

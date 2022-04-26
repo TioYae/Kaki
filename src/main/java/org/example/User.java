@@ -5,13 +5,13 @@ import net.mamoe.mirai.event.Listener;
 import java.util.Timer;
 
 public class User {
-    String id;
+    long id;
     GuessStatus status;
     Listener listener;
     boolean group;
     Timer timer; // 定时器
 
-    User(String id){
+    User(long id){
         this.id = id;
         status = null;
         listener = null;
