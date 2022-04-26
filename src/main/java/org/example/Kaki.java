@@ -103,7 +103,6 @@ public final class Kaki extends JavaPlugin {
         String content = event.getMessage().contentToString();
         System.out.println(content);
 
-
         if (content.startsWith(">") || event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]")) {
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
@@ -249,7 +248,7 @@ public final class Kaki extends JavaPlugin {
                 }
             }
         }
-        respond(content, event);
+        respond(event);
     }
 
     // 添加错误记录
@@ -290,7 +289,8 @@ public final class Kaki extends JavaPlugin {
     }
 
     // 预设回复
-    void respond(String content, MessageEvent event) {
+    void respond(MessageEvent event) {
+        String content = event.getMessage().contentToString();
         if (content.contains("早上好")) {
             event.getSubject().sendMessage("早上好");
         } else if (content.contains("上午好")) {
