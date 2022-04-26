@@ -68,7 +68,7 @@ public final class Kaki extends JavaPlugin {
                             mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
                             event.getSubject().sendMessage("重启成功");
                             break;
-                        case "报错":
+                        case "日志":
                         case "log":
                         case "error":
                             logSend(event);
@@ -76,15 +76,15 @@ public final class Kaki extends JavaPlugin {
                         case "用户锁":
                         case "lock":
                         case "usersLock":
-                            event.getSubject().sendMessage(usersLock.toString());
+                            event.getSubject().sendMessage("用户锁如下：\n" + usersLock.toString());
                             break;
                         case "黑名单":
                         case "black":
-                            event.getSubject().sendMessage(black.toString());
+                            event.getSubject().sendMessage("黑名单如下：\n" + black.toString());
                             break;
                         case "白名单":
                         case "white":
-                            event.getSubject().sendMessage(white.toString());
+                            event.getSubject().sendMessage("白名单如下：\n" + white.toString());
                             break;
                         default:
                             break;
@@ -271,7 +271,7 @@ public final class Kaki extends JavaPlugin {
         StringBuilder message = new StringBuilder();
         for (int i = 0; i < n; i++) {
             String t = logMessages.poll();
-            if (i != 0) message.append("\n");
+            if (i != 0) message.append("\n\n");
             message.append(t);
         }
         event.getSubject().sendMessage(message.toString());
