@@ -377,6 +377,21 @@ public final class Kaki extends JavaPlugin {
                 ans = "「添加崩3角色」指令：\n" +
                         "字面意思，仅管理员可用";
                 break;
+            case "控制台":
+            case "console":
+                if(event.getSender().getId() == masterId) {
+                    ans = "「控制台指令」：\n" +
+                            "重启|relogin|restart: 重启主监听\n" +
+                            "日志|log|error: 获取控制台日志消息\n" +
+                            "用户锁|lock|usersLock: 查询用户锁哈希表\n" +
+                            "黑名单|black: 查看黑名单\n" +
+                            "白名单|white: 查看黑名单\n" +
+                            "\n仅开发者可用";
+                }
+                else {
+                    ans = "您没有权限查看控制台指令";
+                }
+                break;
             default:
                 ans = "未找到「" + content + "」指令";
                 break;
