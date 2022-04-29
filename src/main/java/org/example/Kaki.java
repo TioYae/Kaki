@@ -25,6 +25,7 @@ public final class Kaki extends JavaPlugin {
     public static final List<Long> white = Arrays.asList(1246336370L, 2952514095L);
     public static final List<Long> group = Arrays.asList(1020335236L, 745184152L, 563125969L);
     long masterId = 1246336370L; // 最高管理者id
+    long botId = 2325914164L;
 
     boolean roleLock = false; // 角色添加(文件IO)时上锁
     Listener mainListener; // 总监听
@@ -54,7 +55,7 @@ public final class Kaki extends JavaPlugin {
         // 交互式控制台（开发者专用）
         GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, event -> {
             if (event.getSender().getId() == masterId) {
-                boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]");
+                boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + botId + "]");
                 String str = event.getMessage().contentToString();
                 if (at || str.startsWith(">") || str.startsWith(" ")) {
                     if (at) str = str.substring(12);
@@ -103,7 +104,7 @@ public final class Kaki extends JavaPlugin {
         String content = event.getMessage().contentToString();
         System.out.println(content);
 
-        if (content.startsWith(">") || event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]")) {
+        if (content.startsWith(">") || event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + botId + "]")) {
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
@@ -127,128 +128,146 @@ public final class Kaki extends JavaPlugin {
             System.out.println(content);
             logAdd("处理后的内容：" + content);
 
-            // 进程锁
-            if (userLock) {
-                String[] sentences = content.split(" ");
-                switch (sentences[0]) {
-                    case "help":
-                    case "帮助":
-                        if (sentences.length > 1) help(sentences[1], event);
-                        else help("", event);
-                        break;
-                    case "图片重载":
-                        fileNum.clear();
-                        event.getSubject().sendMessage("图片重载成功");
-                        break;
-                    default:
+            // 创建新进程
+            User user = new User(id);
+            String[] sentences = content.split(" ");
+            String[] title;
+            switch (sentences[0]) {
+                case "help":
+                case "帮助":
+                    if (sentences.length > 1) help(sentences[1], event);
+                    else help("", event);
+                    break;
+                case "猜":
+                case "猜原神":
+                    // 进程锁
+                    if (userLock) {
                         event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                }
-            } else {
-                // 创建新进程
-                User user = new User(id);
-                String[] sentences = content.split(" ");
-                String[] title;
-                switch (sentences[0]) {
-                    case "help":
-                    case "帮助":
-                        if (sentences.length > 1) help(sentences[1], event);
-                        else help("", event);
-                        break;
-                    case "猜":
-                    case "猜原神":
-                        // 群答模式id为群号
-                        if ((content.contains("g") || content.contains("G")) && event.getClass().getName().contains("Group")) {
-                            id = event.getSubject().getId();
-                            user = new User(id);
-                            user.group = true;
-                        }
+                    }
 
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+                    // 群答模式id为群号
+                    if ((content.contains("g") || content.contains("G")) && event.getClass().getName().contains("Group")) {
+                        id = event.getSubject().getId();
+                        user = new User(id);
+                        user.group = true;
+                    }
 
-//                        System.out.println("outer: " + content);
-                        title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
-                        if (!Guess(event, user, title, "原神"))
-                            event.getSubject().sendMessage("获取数据失败");
-                        break;
-                    case "猜崩3":
-                        // 群答模式id为群号
-                        /*if ((content.contains("g") || content.contains("G")) && event.getClass().getName().contains("Group")) {
-                            id = String.valueOf(event.getSubject().getId());
-                            user = new User(id);
-                            user.group = true;
-                        }
+                    // 更新进程锁状态
+                    changeStatus(id, true);
 
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+//                  System.out.println("outer: " + content);
+                    title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
+                    if (!Guess(event, user, title, "原神"))
+                        event.getSubject().sendMessage("获取数据失败");
+                    break;
+                case "猜崩3":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
+                        break;
+                    }
 
-                        System.out.println("outer: " + content);
-                        title = new String[]{"装甲", "角色", "评级", "武器", "归属"};
-                        if (!Guess(event, user, title, "崩3"))
-                            event.getSubject().sendMessage("获取数据失败");*/
-                        break;
-                    case "添加原神角色":
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+                    // 群答模式id为群号
+                    /*if ((content.contains("g") || content.contains("G")) && event.getClass().getName().contains("Group")) {
+                        id = String.valueOf(event.getSubject().getId());
+                        user = new User(id);
+                        user.group = true;
+                    }
 
-//                        System.out.println("白名单：" + white);
-//                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId())) {
-                            logAdd(event.getSender().getId() + "没有添加角色的权限");
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        } else addRole("原神", event, user);
-                        break;
-                    case "添加崩3角色":
-                        // 更新进程锁状态
-                        changeStatus(id, true);
+                    // 更新进程锁状态
+                    changeStatus(id, true);
 
-//                        System.out.println("白名单：" + white);
-//                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId())) {
-                            logAdd(event.getSender().getId() + "没有添加角色的权限");
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        } else addRole("崩3", event, user);
+                    System.out.println("outer: " + content);
+                    title = new String[]{"装甲", "角色", "评级", "武器", "归属"};
+                    if (!Guess(event, user, title, "崩3"))
+                        event.getSubject().sendMessage("获取数据失败");*/
+                    break;
+                case "添加原神角色":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "创建原神文件夹":
-//                        System.out.println("白名单：" + white);
-//                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId())) {
-                            logAdd(event.getSender().getId() + "没有创建文件夹的权限");
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        } else {
-                            if (buildFolder("原神")) event.getSubject().sendMessage("创建文件夹成功");
-                            else event.getSubject().sendMessage("创建文件夹失败");
-                        }
+                    }
+
+                    // 更新进程锁状态
+                    changeStatus(id, true);
+
+//                  System.out.println("白名单：" + white);
+//                  System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(event.getSender().getId())) {
+                        logAdd(event.getSender().getId() + "没有添加角色的权限");
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    } else addRole("原神", event, user);
+                    break;
+                case "添加崩3角色":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "创建崩3文件夹":
-//                        System.out.println("白名单：" + white);
-//                        System.out.println("请求人：" + event.getSender().getId());
-                        if (!white.contains(event.getSender().getId())) {
-                            logAdd(event.getSender().getId() + "没有创建文件夹的权限");
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        } else {
-                            if (buildFolder("崩3")) event.getSubject().sendMessage("创建文件夹成功");
-                            else event.getSubject().sendMessage("创建文件夹失败");
-                        }
+                    }
+
+                    // 更新进程锁状态
+                    changeStatus(id, true);
+
+//                  System.out.println("白名单：" + white);
+//                  System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(event.getSender().getId())) {
+                        logAdd(event.getSender().getId() + "没有添加角色的权限");
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    } else addRole("崩3", event, user);
+                    break;
+                case "创建原神文件夹":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "图片重载":
-                        fileNum.clear();
-                        event.getSubject().sendMessage("图片重载成功");
+                    }
+
+//                  System.out.println("白名单：" + white);
+//                  System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(event.getSender().getId())) {
+                        logAdd(event.getSender().getId() + "没有创建文件夹的权限");
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    } else {
+                        if (buildFolder("原神")) event.getSubject().sendMessage("创建文件夹成功");
+                        else event.getSubject().sendMessage("创建文件夹失败");
+                    }
+                    break;
+                case "创建崩3文件夹":
+                    // 进程锁
+                    if (userLock) {
+                        event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
-                    case "test":
-                        if (!white.contains(event.getSender().getId()))
-                            event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                        else
-                            test(event);
-                        break;
-                    default:
-                        System.out.println("default in \">\" order");
-                        break;
-                }
+                    }
+
+//                  System.out.println("白名单：" + white);
+//                  System.out.println("请求人：" + event.getSender().getId());
+                    if (!white.contains(event.getSender().getId())) {
+                        logAdd(event.getSender().getId() + "没有创建文件夹的权限");
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    } else {
+                        if (buildFolder("崩3")) event.getSubject().sendMessage("创建文件夹成功");
+                        else event.getSubject().sendMessage("创建文件夹失败");
+                    }
+                    break;
+                case "图片重载":
+                    fileNum.clear();
+                    event.getSubject().sendMessage("图片重载成功");
+                    break;
+                case "test":
+                    if (!white.contains(event.getSender().getId()))
+                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                    else
+                        test(event);
+                    break;
+                default:
+                    System.out.println("default in \">\" order");
+                    break;
             }
         }
         respond(event);
+
     }
 
     // 添加错误记录
@@ -311,7 +330,7 @@ public final class Kaki extends JavaPlugin {
             event.getSubject().sendMessage("晚安");
         }
 
-        boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:2325914164]");
+        boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + botId + "]");
         //带称呼或@触发
         if (content.startsWith("Kaki") || content.startsWith("kaki") || at) {
             if (at) {
@@ -321,9 +340,8 @@ public final class Kaki extends JavaPlugin {
                     content = content.substring(t);
                 else
                     content = "";
-            }
-            else {
-                if(content.length() > 4)
+            } else {
+                if (content.length() > 4)
                     content = content.substring(4);
                 else
                     content = "";
@@ -379,7 +397,7 @@ public final class Kaki extends JavaPlugin {
                 break;
             case "控制台":
             case "console":
-                if(event.getSender().getId() == masterId) {
+                if (event.getSender().getId() == masterId) {
                     ans = "「控制台指令」：\n" +
                             "重启|relogin|restart: 重启主监听\n" +
                             "日志|log|error: 获取控制台日志消息\n" +
@@ -387,8 +405,7 @@ public final class Kaki extends JavaPlugin {
                             "黑名单|black: 查看黑名单\n" +
                             "白名单|white: 查看黑名单\n" +
                             "\n仅开发者可用";
-                }
-                else {
+                } else {
                     ans = "您没有权限查看控制台指令";
                 }
                 break;
@@ -534,8 +551,10 @@ public final class Kaki extends JavaPlugin {
                                     ans = m.toString();
                                 }
                             }
-                            if (ans == null) return; // 输入不规范或抽取角色失败返回null
-                            logAdd("输入不规范或读取角色数据失败");
+                            if (ans == null) {
+                                logAdd("输入不规范或读取角色数据失败");
+                                return; // 输入不规范或抽取角色失败返回null
+                            }
 
                             // 当输入规范时，重置计时器
                             if (person.listener == null) return; // 若定时器已触发，结束监听
@@ -566,8 +585,10 @@ public final class Kaki extends JavaPlugin {
                                     ans = m.toString();
                                 }
                             }
-                            if (ans == null) return; // 输入不规范或抽取角色失败返回null
-                            logAdd("输入不规范或读取角色数据失败");
+                            if (ans == null) {
+                                logAdd("输入不规范或读取角色数据失败");
+                                return; // 输入不规范或抽取角色失败返回null
+                            }
 
                             // 当输入规范时，重置计时器
                             if (person.listener == null) return; // 若定时器已触发，结束监听
