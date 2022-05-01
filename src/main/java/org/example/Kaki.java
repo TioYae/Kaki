@@ -1,15 +1,16 @@
 package org.example;
 
+import net.mamoe.mirai.Bot;
+import net.mamoe.mirai.console.MiraiConsole;
 import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
+import net.mamoe.mirai.event.events.BotEvent;
 import net.mamoe.mirai.event.events.MessageEvent;
-import net.mamoe.mirai.message.data.At;
-import net.mamoe.mirai.message.data.Image;
-import net.mamoe.mirai.message.data.MessageChain;
-import net.mamoe.mirai.message.data.MessageChainBuilder;
+import net.mamoe.mirai.message.data.*;
+import net.mamoe.mirai.utils.BotConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -25,7 +26,7 @@ public final class Kaki extends JavaPlugin {
     public static final List<Long> white = Arrays.asList(1246336370L, 2952514095L);
     public static final List<Long> group = Arrays.asList(1020335236L, 745184152L, 563125969L);
     long masterId = 1246336370L; // 最高管理者id
-    long botId = 2325914164L;
+    long botId = 0;
 
     boolean roleLock = false; // 角色添加(文件IO)时上锁
     Listener mainListener; // 总监听
@@ -48,6 +49,14 @@ public final class Kaki extends JavaPlugin {
     @Override
     public void onEnable() {
         getLogger().info("Plugin loaded!");
+
+        // 机器人上线消息
+        GlobalEventChannel.INSTANCE.subscribeAlways(BotEvent.class, botEvent -> {
+            if(botEvent.getBot().isOnline()) {
+                botId = botEvent.getBot().getId();
+                System.out.println("botId: " + botId);
+            }
+        });
 
         // 主监听
         mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
@@ -109,7 +118,7 @@ public final class Kaki extends JavaPlugin {
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
             logAdd(id + "的状态锁: " + userLock);
-            System.out.println("usersLock: " + usersLock);
+//            System.out.println("usersLock: " + usersLock);
 
 
             if (content.startsWith(">")) {
