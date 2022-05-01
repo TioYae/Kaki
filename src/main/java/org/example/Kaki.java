@@ -8,6 +8,7 @@ import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
 import net.mamoe.mirai.event.events.BotEvent;
+import net.mamoe.mirai.event.events.BotOnlineEvent;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.message.data.*;
 import net.mamoe.mirai.utils.BotConfiguration;
@@ -25,8 +26,8 @@ public final class Kaki extends JavaPlugin {
     public static final List<Long> black = Arrays.asList();
     public static final List<Long> white = Arrays.asList(1246336370L, 2952514095L);
     public static final List<Long> group = Arrays.asList(1020335236L, 745184152L, 563125969L);
+    public static final List<Long> botId = Arrays.asList(2325914164L, 3223626313L, 2418349874L);
     long masterId = 1246336370L; // 最高管理者id
-    long botId = 0;
 
     boolean roleLock = false; // 角色添加(文件IO)时上锁
     Listener mainListener; // 总监听
@@ -50,21 +51,13 @@ public final class Kaki extends JavaPlugin {
     public void onEnable() {
         getLogger().info("Plugin loaded!");
 
-        // 机器人上线消息
-        GlobalEventChannel.INSTANCE.subscribeAlways(BotEvent.class, botEvent -> {
-            if(botEvent.getBot().isOnline()) {
-                botId = botEvent.getBot().getId();
-                System.out.println("botId: " + botId);
-            }
-        });
-
         // 主监听
         mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
 
         // 交互式控制台（开发者专用）
         GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, event -> {
             if (event.getSender().getId() == masterId) {
-                boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + botId + "]");
+                boolean at = isAt(event);
                 String str = event.getMessage().contentToString();
                 if (at || str.startsWith(">") || str.startsWith(" ")) {
                     if (at) str = str.substring(12);
@@ -104,6 +97,15 @@ public final class Kaki extends JavaPlugin {
         });
     }
 
+    boolean isAt(MessageEvent event) {
+        boolean ans = false;
+        for (long bId : botId) {
+            ans = ans || event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + bId + "]");
+            if (ans) return true;
+        }
+        return false;
+    }
+
     // 监听方法
     void hear(MessageEvent event) {
         long id = event.getSender().getId();
@@ -113,7 +115,7 @@ public final class Kaki extends JavaPlugin {
         String content = event.getMessage().contentToString();
         System.out.println(content);
 
-        if (content.startsWith(">") || event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + botId + "]")) {
+        if (content.startsWith(">") || isAt(event)) {
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
@@ -339,7 +341,7 @@ public final class Kaki extends JavaPlugin {
             event.getSubject().sendMessage("晚安");
         }
 
-        boolean at = event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + botId + "]");
+        boolean at = isAt(event);
         //带称呼或@触发
         if (content.startsWith("Kaki") || content.startsWith("kaki") || at) {
             if (at) {
