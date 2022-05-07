@@ -89,6 +89,10 @@ public final class Kaki extends JavaPlugin {
                         case "white":
                             event.getSubject().sendMessage("白名单如下：\n" + white.toString());
                             break;
+                        case "测试":
+                        case "test":
+                            test(event);
+                            break;
                         default:
                             break;
                     }
@@ -136,7 +140,6 @@ public final class Kaki extends JavaPlugin {
                 else
                     content = "";
             }
-            System.out.println(content);
             logAdd("处理后的内容：" + content);
 
             // 创建新进程
@@ -266,12 +269,6 @@ public final class Kaki extends JavaPlugin {
                     fileNum.clear();
                     event.getSubject().sendMessage("图片重载成功");
                     break;
-                case "test":
-                    if (!white.contains(event.getSender().getId()))
-                        event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
-                    else
-                        test(event);
-                    break;
                 default:
                     System.out.println("default in \">\" order");
                     break;
@@ -283,6 +280,7 @@ public final class Kaki extends JavaPlugin {
 
     // 添加错误记录
     void logAdd(String err) {
+        System.out.println(err);
         Date date = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
         if (logMessages.size() >= 10) {
@@ -439,7 +437,6 @@ public final class Kaki extends JavaPlugin {
         if (roleIO == null) return false;
         JSONArray roleData = roleIO.getJsonArray();
         if (roleData == null) {
-            System.out.println("空数据");
             logAdd("读取角色数据失败");
             return false;
         }
@@ -449,7 +446,6 @@ public final class Kaki extends JavaPlugin {
             File file = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + name);
             if (!file.exists()) {
                 if (file.mkdirs()) {
-                    System.out.println("已创建文件夹：" + name);
                     logAdd("已创建文件夹：" + name);
                 } else return false;
             }
@@ -477,7 +473,6 @@ public final class Kaki extends JavaPlugin {
         String[] answer = person.status.roleGuess.getAnswer();
         boolean details = event.getMessage().toString().contains("D") || event.getMessage().toString().contains("d");
         if (answer == null) {
-            System.out.println("读取数据为空");
             logAdd("读取角色数据失败");
             return false;
         }
@@ -486,11 +481,16 @@ public final class Kaki extends JavaPlugin {
         System.out.println(fileNum);
         int imageNum = fileNum.get(answer[0]);
         Random random = new Random();
-        int i = random.nextInt(imageNum) + 1;
-        String pathname = "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i;
-        File f = new File(pathname + ".jpg");
-        if (!f.exists()) // 尝试jpg后缀不对就是png后缀
-            f = new File(pathname + ".png");
+        File f;
+        while (true) {
+            int i = random.nextInt(imageNum) + 1;
+            String pathname = "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i;
+            f = new File(pathname + ".jpg");
+            if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+                f = new File(pathname + ".png");
+            if (f.exists()) break;
+            else logAdd("读取图片失败：" + answer[0] + i);
+        }
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         StringBuilder str = new StringBuilder();
         for (int j = 0; j < answer.length; j++) {
@@ -686,7 +686,6 @@ public final class Kaki extends JavaPlugin {
                         roleLock = true; // MessageEvent
                         String c = e.getMessage().contentToString();
                         String[] title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
-                        System.out.println("addRole: " + c);
                         logAdd("添加角色：" + c);
                         String[] arr = c.split(",|，");
                         if (title.length != arr.length) {
@@ -740,8 +739,19 @@ public final class Kaki extends JavaPlugin {
 
     // 测试
     void test(MessageEvent event) {
-        File f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\原神\\刻晴\\9.jpg");
-        if (!f.exists()) f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\原神\\刻晴\\9.png");
+        if (!fileNum.containsKey("刻晴")) loadImage("刻晴", "原神");
+        int imageNum = fileNum.get("刻晴");
+        Random random = new Random();
+        File f;
+        int i = 9;
+        while (true) {
+            f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\原神\\刻晴\\" + i + ".jpg");
+            if (f.exists()) break;
+            else {
+                logAdd("读取图片失败：" + "刻晴" + i);
+                i = random.nextInt(imageNum) + 1;
+            }
+        }
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         event.getSubject().sendMessage(image);
     }
