@@ -1,4 +1,4 @@
-package org.kaki;
+package org.TioYae.mirai;
 
 import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
@@ -33,7 +33,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为10，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.example.Kaki", "1.0")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai", "1.5.0")
                 .author("Tio Yae")
                 .build()
         );

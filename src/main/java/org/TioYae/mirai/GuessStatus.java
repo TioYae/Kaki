@@ -1,4 +1,4 @@
-package org.kaki;
+package org.TioYae.mirai;
 
 class GuessStatus {
     int n; // 猜的次数
