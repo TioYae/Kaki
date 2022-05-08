@@ -1,4 +1,4 @@
-package org.example;
+package org.kaki;
 
 public class DrawCard {
 }

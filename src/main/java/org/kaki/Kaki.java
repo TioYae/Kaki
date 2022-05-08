@@ -1,33 +1,30 @@
-package org.example;
+package org.kaki;
 
-import net.mamoe.mirai.Bot;
-import net.mamoe.mirai.console.MiraiConsole;
 import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
-import net.mamoe.mirai.event.events.BotEvent;
-import net.mamoe.mirai.event.events.BotOnlineEvent;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.message.data.*;
-import net.mamoe.mirai.utils.BotConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
-import java.io.File;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public final class Kaki extends JavaPlugin {
     public static final Kaki INSTANCE = new Kaki();
 
-    public static final List<Long> black = Arrays.asList();
-    public static final List<Long> white = Arrays.asList(1246336370L, 2952514095L);
-    public static final List<Long> group = Arrays.asList(1020335236L, 745184152L, 563125969L);
-    public static final List<Long> botId = Arrays.asList(2325914164L, 3223626313L, 2418349874L);
-    long masterId = 1246336370L; // 最高管理者id
+    public static List<Long> black; // 黑名单
+    public static List<Long> white; // 白名单
+    public static List<Long> group; // 启用功能的群组
+    public static List<Long> botId; // bot备用列表
+    public static long masterId; // 最高管理者id
 
     boolean roleLock = false; // 角色添加(文件IO)时上锁
     Listener mainListener; // 总监听
@@ -44,13 +41,11 @@ public final class Kaki extends JavaPlugin {
 
     @Override
     public void onLoad(@NotNull PluginComponentStorage $this$onLoad) {
-
+        load();
     }
 
     @Override
     public void onEnable() {
-        getLogger().info("Plugin loaded!");
-
         // 主监听
         mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
 
@@ -101,10 +96,61 @@ public final class Kaki extends JavaPlugin {
         });
     }
 
+    // 读取yaml文件配置
+    void load() {
+        Config config = null;
+        String path = System.getProperty("user.dir") + "/config/org.kaki/config.yml";
+        File f = new File(path);
+        DumperOptions dumperOptions = new DumperOptions();
+        dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        Yaml yaml = new Yaml(dumperOptions);
+        if (!f.getParentFile().exists()) { // 如果父目录不存在，创建父目录
+            f.getParentFile().mkdirs();
+            logAdd("父目录不存在，创建父目录");
+        }
+        if (!f.exists()) {
+            try {
+                f.createNewFile();
+                logAdd("创建文件: " + path);
+                config = new Config();
+
+                config.setMasterId(111111L);
+                config.setBotId(Arrays.asList(222222L));
+                config.setBotPassword(Arrays.asList("123456"));
+                config.setList_Black(null);
+                config.setList_White(Arrays.asList(111111L));
+                config.setList_Group(Arrays.asList(654321L));
+                config.setConfigPath("path");
+
+                yaml.dump(config, new FileWriter(path));
+            } catch (IOException e) {
+                e.printStackTrace();
+                logAdd("文件不存在，创建文件失败");
+            }
+        }
+        try {
+            config = yaml.loadAs(new FileReader(path), Config.class);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            logAdd("读取配置失败");
+        }
+
+        if (config == null) {
+            logAdd("配置为空");
+            return;
+        }
+        masterId = config.getMasterId();
+        botId = config.getBotId();
+        black = config.getList_Black();
+        white = config.getList_White();
+        group = config.getList_Group();
+    }
+
+    // 判断是否被@
     boolean isAt(MessageEvent event) {
         boolean ans = false;
         for (long bId : botId) {
-            ans = ans || event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + bId + "]");
+            ans = event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + bId + "]");
             if (ans) return true;
         }
         return false;
@@ -739,20 +785,8 @@ public final class Kaki extends JavaPlugin {
 
     // 测试
     void test(MessageEvent event) {
-        if (!fileNum.containsKey("刻晴")) loadImage("刻晴", "原神");
-        int imageNum = fileNum.get("刻晴");
-        Random random = new Random();
-        File f;
-        int i = 9;
-        while (true) {
-            f = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\原神\\刻晴\\" + i + ".jpg");
-            if (f.exists()) break;
-            else {
-                logAdd("读取图片失败：" + "刻晴" + i);
-                i = random.nextInt(imageNum) + 1;
-            }
-        }
-        Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
-        event.getSubject().sendMessage(image);
+        System.out.println(masterId);
+        System.out.println(botId);
+        event.getSubject().sendMessage("控制台输出");
     }
 }

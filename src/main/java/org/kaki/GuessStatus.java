@@ -1,4 +1,4 @@
-package org.example;
+package org.kaki;
 
 class GuessStatus {
     int n; // 猜的次数

@@ -1,4 +1,4 @@
-package org.example;
+package org.kaki;
 
 import net.mamoe.mirai.event.Listener;
 

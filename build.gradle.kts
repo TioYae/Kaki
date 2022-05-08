@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "org.example"
-version = "1.4.1"
+version = "1.5.0"
 
 repositories {
     maven("https://maven.aliyun.com/repository/public")
@@ -16,4 +16,5 @@ repositories {
 
 dependencies {
     implementation("org.json:json:20220320")
+    implementation("org.yaml:snakeyaml:1.30")
 }
