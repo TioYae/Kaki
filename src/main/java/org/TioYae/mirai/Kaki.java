@@ -27,13 +27,13 @@ public final class Kaki extends JavaPlugin {
     public static long masterId; // 最高管理者id
 
     boolean roleLock = false; // 角色添加(文件IO)时上锁
-    Listener mainListener; // 总监听
+    Listener<MessageEvent> mainListener; // 总监听
     HashMap<Long, Boolean> usersLock = new HashMap<>(); // 用户指令锁
     HashMap<String, Integer> fileNum = new HashMap<>(); // 读取的图片数量
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为10，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai", "1.5.0")
+        super(new JvmPluginDescriptionBuilder("Kaki", "1.5.0")
                 .author("Tio Yae")
                 .build()
         );
@@ -105,24 +105,28 @@ public final class Kaki extends JavaPlugin {
         dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         Yaml yaml = new Yaml(dumperOptions);
         if (!f.getParentFile().exists()) { // 如果父目录不存在，创建父目录
-            f.getParentFile().mkdirs();
-            logAdd("父目录不存在，创建父目录");
+            if (f.getParentFile().mkdirs())
+                logAdd("父目录不存在，创建父目录");
+            else
+                logAdd("创建父目录失败");
         }
         if (!f.exists()) {
             try {
-                f.createNewFile();
-                logAdd("创建文件: " + path);
-                config = new Config();
+                if(f.createNewFile()) {
+                    logAdd("创建文件: " + path);
+                    config = new Config();
 
-                config.setMasterId(111111L);
-                config.setBotId(Arrays.asList(222222L));
-                config.setBotPassword(Arrays.asList("123456"));
-                config.setList_Black(null);
-                config.setList_White(Arrays.asList(111111L));
-                config.setList_Group(Arrays.asList(654321L));
-                config.setConfigPath("path");
+                    config.setMasterId(111111L);
+                    config.setBotId(Collections.singletonList(222222L));
+                    config.setBotPassword(Collections.singletonList("123456"));
+                    config.setList_Black(null);
+                    config.setList_White(Collections.singletonList(111111L));
+                    config.setList_Group(Collections.singletonList(654321L));
+                    config.setConfigPath("path");
 
-                yaml.dump(config, new FileWriter(path));
+                    yaml.dump(config, new FileWriter(path));
+                }
+                else logAdd("创建文件: " + path + "失败");
             } catch (IOException e) {
                 e.printStackTrace();
                 logAdd("文件不存在，创建文件失败");
@@ -148,7 +152,7 @@ public final class Kaki extends JavaPlugin {
 
     // 判断是否被@
     boolean isAt(MessageEvent event) {
-        boolean ans = false;
+        boolean ans;
         for (long bId : botId) {
             ans = event.getMessage().serializeToMiraiCode().contains("[mirai:at:" + bId + "]");
             if (ans) return true;
@@ -166,11 +170,17 @@ public final class Kaki extends JavaPlugin {
         System.out.println(content);
 
         if (content.startsWith(">") || isAt(event)) {
+            // 拦截黑名单
+            if (black.contains(id)) {
+                logAdd(id + "在黑名单中");
+                event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
+                return;
+            }
+
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
             logAdd(id + "的状态锁: " + userLock);
-//            System.out.println("usersLock: " + usersLock);
 
 
             if (content.startsWith(">")) {
@@ -253,8 +263,6 @@ public final class Kaki extends JavaPlugin {
                     // 更新进程锁状态
                     changeStatus(id, true);
 
-//                  System.out.println("白名单：" + white);
-//                  System.out.println("请求人：" + event.getSender().getId());
                     if (!white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有添加角色的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
@@ -270,8 +278,6 @@ public final class Kaki extends JavaPlugin {
                     // 更新进程锁状态
                     changeStatus(id, true);
 
-//                  System.out.println("白名单：" + white);
-//                  System.out.println("请求人：" + event.getSender().getId());
                     if (!white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有添加角色的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
@@ -284,8 +290,6 @@ public final class Kaki extends JavaPlugin {
                         break;
                     }
 
-//                  System.out.println("白名单：" + white);
-//                  System.out.println("请求人：" + event.getSender().getId());
                     if (!white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有创建文件夹的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
@@ -301,8 +305,6 @@ public final class Kaki extends JavaPlugin {
                         break;
                     }
 
-//                  System.out.println("白名单：" + white);
-//                  System.out.println("请求人：" + event.getSender().getId());
                     if (!white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有创建文件夹的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
@@ -321,7 +323,6 @@ public final class Kaki extends JavaPlugin {
             }
         }
         respond(event);
-
     }
 
     // 添加错误记录
@@ -352,14 +353,13 @@ public final class Kaki extends JavaPlugin {
     }
 
     // 更改对应用户的状态
-    boolean changeStatus(long id, boolean lock) {
+    void changeStatus(long id, boolean lock) {
         if (id == -1) {
             logAdd("修改用户状态时获取id失败");
-            return false;
+            return;
         }
         usersLock.remove(id);
         usersLock.put(id, lock);
-        return true;
     }
 
     // 预设回复
@@ -474,13 +474,14 @@ public final class Kaki extends JavaPlugin {
     // 批量创建文件夹
     boolean buildFolder(String game) {
         Role_JOSNIO roleIO = null;
-        //if (game.equals("原神")) roleIO = new Role_JOSNIO("./src/config/roleData_Genshin.json");
-        //else if (game.equals("崩3")) roleIO = new Role_JOSNIO("./src/config/roleData_Honkai.json");
         if (game.equals("原神"))
-            roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
+            roleIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/roleData_Genshin.json");
         else if (game.equals("崩3"))
-            roleIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Honkai.json");
-        if (roleIO == null) return false;
+            roleIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/roleData_Honkai.json");
+        if (roleIO == null) {
+            logAdd("读取角色数据失败");
+            return false;
+        }
         JSONArray roleData = roleIO.getJsonArray();
         if (roleData == null) {
             logAdd("读取角色数据失败");
@@ -489,7 +490,7 @@ public final class Kaki extends JavaPlugin {
         int n = roleData.length();
         for (int i = 0; i < n; i++) {
             String name = roleData.getJSONObject(i).getString("名称");
-            File file = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + name);
+            File file = new File(System.getProperty("user.dir") + "/config/picture/" + game + "/" + name);
             if (!file.exists()) {
                 if (file.mkdirs()) {
                     logAdd("已创建文件夹：" + name);
@@ -501,9 +502,11 @@ public final class Kaki extends JavaPlugin {
 
     // 加载图片数量
     void loadImage(String name, String game) {
-        File[] files = new File("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + name).listFiles();
-        if (files == null) fileNum.put(name, 0);
-        else fileNum.put(name, files.length);
+        File[] files = new File(System.getProperty("user.dir") + "/config/picture/" + game + "/" + name).listFiles();
+        if (files == null) {
+            fileNum.put(name, 0);
+            logAdd("未找到" + game + name + "的图片");
+        } else fileNum.put(name, files.length);
     }
 
     // 猜
@@ -511,10 +514,10 @@ public final class Kaki extends JavaPlugin {
         String g = "";
         if (game.equals("原神")) {
             g = "一位角色";
-            person.status = new GuessStatus(title, "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
+            person.status = new GuessStatus(title, System.getProperty("user.dir") + "/config/roleData_Genshin.json");
         } else if (game.equals("崩3")) {
             g = "一件装甲";
-            person.status = new GuessStatus(title, "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Honkai.json");
+            person.status = new GuessStatus(title, System.getProperty("user.dir") + "/config/roleData_Honkai.json");
         }
         String[] answer = person.status.roleGuess.getAnswer();
         boolean details = event.getMessage().toString().contains("D") || event.getMessage().toString().contains("d");
@@ -527,22 +530,24 @@ public final class Kaki extends JavaPlugin {
         System.out.println(fileNum);
         int imageNum = fileNum.get(answer[0]);
         Random random = new Random();
-        File f;
-        while (true) {
-            int i = random.nextInt(imageNum) + 1;
-            String pathname = "C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\picture\\" + game + "\\" + answer[0] + "\\" + i;
-            f = new File(pathname + ".jpg");
-            if (!f.exists()) // 尝试jpg后缀不对就是png后缀
-                f = new File(pathname + ".png");
-            if (f.exists()) break;
-            else logAdd("读取图片失败：" + answer[0] + i);
-        }
-        Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
+        int i = random.nextInt(imageNum) + 1;
+        String pathname = System.getProperty("user.dir") + "/config/picture/" + game + "/" + answer[0] + "/" + i;
+        File f = new File(pathname + ".jpg");
+        if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+            f = new File(pathname + ".png");
+
         StringBuilder str = new StringBuilder();
         for (int j = 0; j < answer.length; j++) {
             str.append("\n").append(title[j]).append("：").append(answer[j]);
         }
-        MessageChain role = new MessageChainBuilder().append(image).append(str).build();
+        MessageChain role;
+        if (f.exists()) {
+            Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
+            role = new MessageChainBuilder().append(image).append(str).build();
+        } else {
+            logAdd("读取图片失败：" + answer[0] + i);
+            role = new MessageChainBuilder().append(str).build();
+        }
 
         if (person.status.n < 0) {
             // 加上at大概率发不出去，弃用，未修复
@@ -733,7 +738,7 @@ public final class Kaki extends JavaPlugin {
                         String c = e.getMessage().contentToString();
                         String[] title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
                         logAdd("添加角色：" + c);
-                        String[] arr = c.split(",|，");
+                        String[] arr = c.split("[,，]");
                         if (title.length != arr.length) {
                             if (arr[0].equals("取消")) {
                                 e.getSubject().sendMessage("已取消添加角色操作");
@@ -749,7 +754,7 @@ public final class Kaki extends JavaPlugin {
                             return;
                         }
 
-                        Role_JOSNIO jsonIO = new Role_JOSNIO("C:\\Users\\Tio\\IdeaProjects\\Kaki Sama\\src\\config\\roleData_Genshin.json");
+                        Role_JOSNIO jsonIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/roleData_Genshin.json");
                         try {
                             if (jsonIO.jsonAdd(title, arr)) {
                                 jsonIO.jsonWrite();
