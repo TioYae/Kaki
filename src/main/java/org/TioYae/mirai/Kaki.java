@@ -33,7 +33,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为10，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("Kaki", "1.5.1")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.5.1")
                 .author("Tio Yae")
                 .build()
         );
@@ -41,7 +41,7 @@ public final class Kaki extends JavaPlugin {
 
     @Override
     public void onLoad(@NotNull PluginComponentStorage $this$onLoad) {
-        load();
+        loadConfig();
     }
 
     @Override
@@ -57,7 +57,8 @@ public final class Kaki extends JavaPlugin {
                 if (at || str.startsWith(">") || str.startsWith(" ")) {
                     if (at) str = str.substring(12);
                     else str = str.substring(1);
-                    switch (str) {
+                    String[] order = str.split(" ");
+                    switch (order[0]) {
                         case "重启":
                         case "relogin":
                         case "restart":
@@ -69,7 +70,10 @@ public final class Kaki extends JavaPlugin {
                         case "日志":
                         case "log":
                         case "error":
-                            logSend(event);
+                            if (order.length > 1 && order[1].matches("[0-9]+"))
+                                logSend(event, Integer.parseInt(order[1]));
+                            else
+                                logSend(event, 10);
                             break;
                         case "用户锁":
                         case "lock":
@@ -97,7 +101,7 @@ public final class Kaki extends JavaPlugin {
     }
 
     // 读取yaml文件配置
-    void load() {
+    void loadConfig() {
         Config config = null;
         String path = System.getProperty("user.dir") + "/config/org.kaki/config.yml";
         File f = new File(path);
@@ -112,7 +116,7 @@ public final class Kaki extends JavaPlugin {
         }
         if (!f.exists()) {
             try {
-                if(f.createNewFile()) {
+                if (f.createNewFile()) {
                     logAdd("创建文件: " + path);
                     config = new Config();
 
@@ -125,8 +129,7 @@ public final class Kaki extends JavaPlugin {
                     config.setConfigPath("path");
 
                     yaml.dump(config, new FileWriter(path));
-                }
-                else logAdd("创建文件: " + path + "失败");
+                } else logAdd("创建文件: " + path + "失败");
             } catch (IOException e) {
                 e.printStackTrace();
                 logAdd("文件不存在，创建文件失败");
@@ -164,14 +167,14 @@ public final class Kaki extends JavaPlugin {
     void hear(MessageEvent event) {
         long id = event.getSender().getId();
         // 限定监听白名单的群
-        if (event.getClass().getName().contains("Group") && !group.contains(event.getSubject().getId()))
+        if (event.getClass().getName().contains("Group") && group != null && !group.contains(event.getSubject().getId()))
             return;
         String content = event.getMessage().contentToString();
         System.out.println(content);
 
         if (content.startsWith(">") || isAt(event)) {
             // 拦截黑名单
-            if (black.contains(id)) {
+            if (black != null && black.contains(id)) {
                 logAdd(id + "在黑名单中");
                 event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                 return;
@@ -180,7 +183,7 @@ public final class Kaki extends JavaPlugin {
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
             System.out.println(id + " lock(outer): " + userLock);
-            logAdd(id + "的状态锁: " + userLock);
+            System.out.println(id + "的状态锁: " + userLock);
 
 
             if (content.startsWith(">")) {
@@ -196,7 +199,7 @@ public final class Kaki extends JavaPlugin {
                 else
                     content = "";
             }
-            logAdd("处理后的内容：" + content);
+            System.out.println("处理后的内容：" + content);
 
             // 创建新进程
             User user = new User(id);
@@ -212,6 +215,7 @@ public final class Kaki extends JavaPlugin {
                 case "猜原神":
                     // 进程锁
                     if (userLock) {
+                        logAdd(id + "正处于指令运行状态");
                         event.getSubject().sendMessage("有指令正在运行，取消本次指令操作");
                         break;
                     }
@@ -263,7 +267,7 @@ public final class Kaki extends JavaPlugin {
                     // 更新进程锁状态
                     changeStatus(id, true);
 
-                    if (!white.contains(event.getSender().getId())) {
+                    if (white != null && !white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有添加角色的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                     } else addRole("原神", event, user);
@@ -278,7 +282,7 @@ public final class Kaki extends JavaPlugin {
                     // 更新进程锁状态
                     changeStatus(id, true);
 
-                    if (!white.contains(event.getSender().getId())) {
+                    if (white != null && !white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有添加角色的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                     } else addRole("崩3", event, user);
@@ -290,7 +294,7 @@ public final class Kaki extends JavaPlugin {
                         break;
                     }
 
-                    if (!white.contains(event.getSender().getId())) {
+                    if (white != null && !white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有创建文件夹的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                     } else {
@@ -305,7 +309,7 @@ public final class Kaki extends JavaPlugin {
                         break;
                     }
 
-                    if (!white.contains(event.getSender().getId())) {
+                    if (white != null && !white.contains(event.getSender().getId())) {
                         logAdd(event.getSender().getId() + "没有创建文件夹的权限");
                         event.getSubject().sendMessage("Kaki不想干活啦，去找Tio吧");
                     } else {
@@ -330,19 +334,20 @@ public final class Kaki extends JavaPlugin {
         System.out.println(err);
         Date date = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        if (logMessages.size() >= 10) {
+        if (logMessages.size() >= 50) {
             logMessages.poll();
         }
         logMessages.offer(dateFormat.format(date) + "\n" + err);
     }
 
     // 给开发者发送错误记录
-    void logSend(MessageEvent event) {
-        int n = logMessages.size();
-        if (n == 0) {
+    void logSend(MessageEvent event, int n) {
+        int l = logMessages.size();
+        if (l == 0) {
             event.getSubject().sendMessage("无错误记录");
             return;
         }
+        if (n > l) n = l;
         StringBuilder message = new StringBuilder();
         for (int i = 0; i < n; i++) {
             String t = logMessages.poll();
@@ -523,6 +528,8 @@ public final class Kaki extends JavaPlugin {
         boolean details = event.getMessage().toString().contains("D") || event.getMessage().toString().contains("d");
         if (answer == null) {
             logAdd("读取角色数据失败");
+            // 更新进程锁状态
+            changeStatus(person.id, false);
             return false;
         }
 
@@ -550,8 +557,6 @@ public final class Kaki extends JavaPlugin {
         }
 
         if (person.status.n < 0) {
-            // 加上at大概率发不出去，弃用，未修复
-            // 原因：风控，与代码无关
             if (person.group) { // 群答模式
                 event.getSubject().sendMessage("「群答模式」\n已随机抽取" + g + "，请开始你们的猜测 ^_^");
             } else if (event.getClass().getName().contains("Group")) { // 群组消息要@
@@ -595,9 +600,7 @@ public final class Kaki extends JavaPlugin {
                     /*if (person.status.n == 0) { // 跳过指令句 // 用FriendMessageEvent时需要跳过
                         person.status.n++;
                     } else */
-                    if (person.status.n < 5 && !c.startsWith(">")) { // 输入指令语句不执行猜的动作
-                        // 加上at大概率发不出去，弃用，未修复
-                        // 原因：风控，与代码无关
+                    if (person.status.n < 5 && !c.startsWith(">") && !isAt(e)) { // 输入指令语句或@不执行猜的动作
                         if (e.getClass().getName().contains("Group") && !person.group) { // 群组消息要@(非群答模式)
                             At at = new At(e.getSender().getId());
                             String ans = person.status.guess(c); // 获取猜的结果
