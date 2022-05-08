@@ -33,7 +33,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为10，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("Kaki", "1.5.0")
+        super(new JvmPluginDescriptionBuilder("Kaki", "1.5.1")
                 .author("Tio Yae")
                 .build()
         );
@@ -475,9 +475,9 @@ public final class Kaki extends JavaPlugin {
     boolean buildFolder(String game) {
         Role_JOSNIO roleIO = null;
         if (game.equals("原神"))
-            roleIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/roleData_Genshin.json");
+            roleIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/org.kaki/roleData_Genshin.json");
         else if (game.equals("崩3"))
-            roleIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/roleData_Honkai.json");
+            roleIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/org.kaki/roleData_Honkai.json");
         if (roleIO == null) {
             logAdd("读取角色数据失败");
             return false;
@@ -490,7 +490,7 @@ public final class Kaki extends JavaPlugin {
         int n = roleData.length();
         for (int i = 0; i < n; i++) {
             String name = roleData.getJSONObject(i).getString("名称");
-            File file = new File(System.getProperty("user.dir") + "/config/picture/" + game + "/" + name);
+            File file = new File(System.getProperty("user.dir") + "/config/org.kaki/picture/" + game + "/" + name);
             if (!file.exists()) {
                 if (file.mkdirs()) {
                     logAdd("已创建文件夹：" + name);
@@ -502,7 +502,7 @@ public final class Kaki extends JavaPlugin {
 
     // 加载图片数量
     void loadImage(String name, String game) {
-        File[] files = new File(System.getProperty("user.dir") + "/config/picture/" + game + "/" + name).listFiles();
+        File[] files = new File(System.getProperty("user.dir") + "/config/org.kaki/picture/" + game + "/" + name).listFiles();
         if (files == null) {
             fileNum.put(name, 0);
             logAdd("未找到" + game + name + "的图片");
@@ -514,10 +514,10 @@ public final class Kaki extends JavaPlugin {
         String g = "";
         if (game.equals("原神")) {
             g = "一位角色";
-            person.status = new GuessStatus(title, System.getProperty("user.dir") + "/config/roleData_Genshin.json");
+            person.status = new GuessStatus(title, System.getProperty("user.dir") + "/config/org.kaki/roleData_Genshin.json");
         } else if (game.equals("崩3")) {
             g = "一件装甲";
-            person.status = new GuessStatus(title, System.getProperty("user.dir") + "/config/roleData_Honkai.json");
+            person.status = new GuessStatus(title, System.getProperty("user.dir") + "/config/org.kaki/roleData_Honkai.json");
         }
         String[] answer = person.status.roleGuess.getAnswer();
         boolean details = event.getMessage().toString().contains("D") || event.getMessage().toString().contains("d");
@@ -531,7 +531,7 @@ public final class Kaki extends JavaPlugin {
         int imageNum = fileNum.get(answer[0]);
         Random random = new Random();
         int i = random.nextInt(imageNum) + 1;
-        String pathname = System.getProperty("user.dir") + "/config/picture/" + game + "/" + answer[0] + "/" + i;
+        String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/" + game + "/" + answer[0] + "/" + i;
         File f = new File(pathname + ".jpg");
         if (!f.exists()) // 尝试jpg后缀不对就是png后缀
             f = new File(pathname + ".png");
@@ -754,7 +754,7 @@ public final class Kaki extends JavaPlugin {
                             return;
                         }
 
-                        Role_JOSNIO jsonIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/roleData_Genshin.json");
+                        Role_JOSNIO jsonIO = new Role_JOSNIO(System.getProperty("user.dir") + "/config/org.kaki/roleData_Genshin.json");
                         try {
                             if (jsonIO.jsonAdd(title, arr)) {
                                 jsonIO.jsonWrite();
