@@ -30,10 +30,12 @@ public final class Kaki extends JavaPlugin {
     Listener<MessageEvent> mainListener; // 总监听
     HashMap<Long, Boolean> usersLock = new HashMap<>(); // 用户指令锁
     HashMap<String, Integer> fileNum = new HashMap<>(); // 读取的图片数量
-    Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为10，可到logAdd处修改
+    HashMap<Long, DrawStatus> drawStatus; // 每日抽卡记录
+    Draw_IO draw_io = new Draw_IO(); // 抽卡记录存取对象
+    Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.5.1")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.0")
                 .author("Tio Yae")
                 .build()
         );
@@ -42,6 +44,9 @@ public final class Kaki extends JavaPlugin {
     @Override
     public void onLoad(@NotNull PluginComponentStorage $this$onLoad) {
         loadConfig();
+
+        drawStatus = draw_io.loadDailyDrawStatus(System.getProperty("user.dir") + "/config/org.kaki/drawStatus.txt");
+        if (drawStatus == null) logAdd("读取抽卡数据失败");
     }
 
     @Override
@@ -126,7 +131,6 @@ public final class Kaki extends JavaPlugin {
                     config.setList_Black(null);
                     config.setList_White(Collections.singletonList(111111L));
                     config.setList_Group(Collections.singletonList(654321L));
-                    config.setConfigPath("path");
 
                     yaml.dump(config, new FileWriter(path));
                 } else logAdd("创建文件: " + path + "失败");
@@ -232,7 +236,7 @@ public final class Kaki extends JavaPlugin {
 
 //                  System.out.println("outer: " + content);
                     title = new String[]{"名称", "星级", "性别", "属性", "武器", "归属"};
-                    if (!Guess(event, user, title, "原神"))
+                    if (!guess(event, user, title, "原神"))
                         event.getSubject().sendMessage("获取数据失败");
                     break;
                 case "猜崩3":
@@ -320,6 +324,10 @@ public final class Kaki extends JavaPlugin {
                 case "图片重载":
                     fileNum.clear();
                     event.getSubject().sendMessage("图片重载成功");
+                    break;
+                case "draw":
+                case "抽卡":
+                    dailyDrawCard(event);
                     break;
                 default:
                     System.out.println("default in \">\" order");
@@ -430,6 +438,7 @@ public final class Kaki extends JavaPlugin {
 //                        ">猜崩3（未启用）\n" +
                         ">添加原神角色\n" +
 //                        ">添加崩3角色（未启用）\n" +
+                        ">抽卡\n" +
                         "\n可以通过输入「>帮助 指令名」来获取更多帮助" +
                         "\n在群聊中可以通过「@Kaki」取代「>」符号";
                 break;
@@ -454,6 +463,10 @@ public final class Kaki extends JavaPlugin {
             case "添加崩3角色":
                 ans = "「添加崩3角色」指令：\n" +
                         "字面意思，仅管理员可用";
+                break;
+            case "抽卡":
+                ans = "「抽卡」指令：\n" +
+                        "每位用户每天可以抽一次原神角色，角色数量区间为[0, 3]";
                 break;
             case "控制台":
             case "console":
@@ -515,7 +528,7 @@ public final class Kaki extends JavaPlugin {
     }
 
     // 猜
-    boolean Guess(MessageEvent event, User person, String[] title, String game) {
+    boolean guess(MessageEvent event, User person, String[] title, String game) {
         String g = "";
         if (game.equals("原神")) {
             g = "一位角色";
@@ -789,6 +802,63 @@ public final class Kaki extends JavaPlugin {
                 changeStatus(person.id, false);
                 break;
         }
+    }
+
+    // 每日抽卡
+    void dailyDrawCard(MessageEvent event) {
+        DrawStatus status;
+        long id = event.getSender().getId();
+        if (drawStatus == null) drawStatus = new HashMap<>();
+        if (drawStatus.containsKey(id)) {
+            status = drawStatus.get(id);
+            String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+            if (!date.equals(status.date))
+                status = new DrawStatus(System.getProperty("user.dir") + "/config/org.kaki/roleData_Genshin.json");
+        } else
+            status = new DrawStatus(System.getProperty("user.dir") + "/config/org.kaki/roleData_Genshin.json");
+
+        List<String> name = status.role;
+        drawStatus.put(id, status);
+        if (status.num == null) {
+            status.num = new HashMap<>();
+            for (String s : name) {
+                if (!fileNum.containsKey(s)) loadImage(s, "原神");
+                int imageNum = fileNum.get(s);
+                Random random = new Random();
+                int i = random.nextInt(imageNum) + 1;
+                status.num.put(s, i);
+            }
+        }
+
+        MessageChainBuilder messages = new MessageChainBuilder();
+        if (event.getClass().getName().contains("Group")) { // 群组消息要@
+            At at = new At(event.getSender().getId());
+            messages.append(at).append("\n");
+        }
+
+        if (name == null) {
+            messages.append("恭喜你，什么也没抽到！");
+        } else {
+            messages.append("恭喜你，抽到以下角色：\n");
+            for (String s : name) {
+                int i = status.num.get(s);
+                String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/" + s + "/" + i;
+                File f = new File(pathname + ".jpg");
+                if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+                    f = new File(pathname + ".png");
+
+                if (f.exists()) {
+                    Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
+                    messages.append(s).append(": \n").append(image).append("\n");
+                } else {
+                    logAdd("读取图片失败：" + s + i);
+                    messages.append(s).append(": \n图片读取失败\n");
+                }
+            }
+        }
+
+        event.getSubject().sendMessage(messages.build());
+        if (!draw_io.saveDailyDrawStatus(drawStatus)) logAdd("保存抽卡数据失败");
     }
 
     // 测试

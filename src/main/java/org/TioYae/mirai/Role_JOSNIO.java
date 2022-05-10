@@ -16,7 +16,6 @@ class Role_JOSNIO {
 
     // 读取json对象数组
     void buildJsonArray() {
-        String jsonStr = "";
         try {
             File file = new File(this.path);
             FileReader fileReader = new FileReader(file);
@@ -28,11 +27,12 @@ class Role_JOSNIO {
             }
             fileReader.close();
             reader.close();
-            jsonStr = sb.toString();
+            String jsonStr = sb.toString();
 //            System.out.println(jsonStr);
             this.jsonArray = new JSONArray(jsonStr);
 //            System.out.println(this.jsonArray);
         } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
