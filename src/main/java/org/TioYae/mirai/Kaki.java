@@ -58,10 +58,15 @@ public final class Kaki extends JavaPlugin {
         GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, event -> {
             if (event.getSender().getId() == masterId) {
                 boolean at = isAt(event);
-                String str = event.getMessage().contentToString();
+                String str = event.getMessage().serializeToMiraiCode();
                 if (at || str.startsWith(">") || str.startsWith(" ")) {
-                    if (at) str = str.substring(12);
-                    else str = str.substring(1);
+                    if (at) {
+                        int t = str.indexOf("]") + 1;
+                        if (str.length() > t && str.charAt(t) == ' ')
+                            str = str.substring(t + 1);
+                        else
+                            str = str.substring(t);
+                    } else str = str.substring(1);
                     String[] order = str.split(" ");
                     switch (order[0]) {
                         case "重启":
@@ -92,6 +97,23 @@ public final class Kaki extends JavaPlugin {
                         case "白名单":
                         case "white":
                             event.getSubject().sendMessage("白名单如下：\n" + white.toString());
+                            break;
+                        case "抽卡数据":
+                        case "drawData":
+                        case "dd":
+                            long id = 0;
+                            if (order.length > 1) {
+                                String mirai = event.getMessage().serializeToMiraiCode();
+                                System.out.println(mirai);
+                                if (order[1].contains("[mirai:at:") && order[1].contains("]")) { // 如果是@
+                                    int l = order[1].indexOf("at:") + 3, r = order[1].indexOf("]"); // 去掉@的包装
+                                    String s = order[1].substring(l, r);
+                                    if (s.matches("[0-9]+"))  // 判断是否为纯数字
+                                        id = Long.parseLong(s);
+                                }
+                            }
+                            if (id == 0) id = event.getSender().getId();
+                            drawDataSend(event, id);
                             break;
                         case "测试":
                         case "test":
@@ -365,6 +387,20 @@ public final class Kaki extends JavaPlugin {
         event.getSubject().sendMessage(message.toString());
     }
 
+    // 查询用户的抽卡数据
+    void drawDataSend(MessageEvent event, long id) {
+        if (!drawStatus.containsKey(id)) {
+            event.getSubject().sendMessage("未找到用户" + id + "的抽卡数据");
+            return;
+        }
+        DrawStatus ds = drawStatus.get(id);
+        StringBuilder message = new StringBuilder().append("用户").append(id).append("的抽卡数据为: ");
+        for (String s : ds.role) {
+            message.append("\n").append(s).append(": ").append(ds.num.get(s));
+        }
+        event.getSubject().sendMessage(message.toString());
+    }
+
     // 更改对应用户的状态
     void changeStatus(long id, boolean lock) {
         if (id == -1) {
@@ -377,6 +413,9 @@ public final class Kaki extends JavaPlugin {
 
     // 预设回复
     void respond(MessageEvent event) {
+        long id = event.getSender().getId();
+        if (black != null && black.contains(id)) return;
+
         String content = event.getMessage().contentToString();
         if (content.contains("早上好")) {
             event.getSubject().sendMessage("早上好");
@@ -477,6 +516,7 @@ public final class Kaki extends JavaPlugin {
                             "用户锁|lock|usersLock: 查询用户锁哈希表\n" +
                             "黑名单|black: 查看黑名单\n" +
                             "白名单|white: 查看黑名单\n" +
+                            "抽卡数据|drawData|dd: 查询用户xxx的抽卡数据\n" +
                             "\n仅开发者可用";
                 } else {
                     ans = "您没有权限查看控制台指令";
