@@ -35,7 +35,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.0")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.1")
                 .author("Tio Yae")
                 .build()
         );
@@ -208,7 +208,6 @@ public final class Kaki extends JavaPlugin {
 
             // 获取请求指令操作用户状态
             boolean userLock = usersLock.getOrDefault(id, false);
-            System.out.println(id + " lock(outer): " + userLock);
             System.out.println(id + "的状态锁: " + userLock);
 
 
@@ -859,7 +858,7 @@ public final class Kaki extends JavaPlugin {
 
         List<String> name = status.role;
         drawStatus.put(id, status);
-        if (status.num == null) {
+        if (name != null && status.num == null) {
             status.num = new HashMap<>();
             for (String s : name) {
                 if (!fileNum.containsKey(s)) loadImage(s, "原神");
@@ -903,8 +902,20 @@ public final class Kaki extends JavaPlugin {
 
     // 测试
     void test(MessageEvent event) {
-        System.out.println(masterId);
-        System.out.println(botId);
-        event.getSubject().sendMessage("控制台输出");
+        String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/";
+        File f1 = new File(pathname + "莫娜/7.jpg"), f2 = new File(pathname + "刻晴/9.jpg"), f3 = new File(pathname + "荧/1.jpg");
+        if (!f1.exists()) // 尝试jpg后缀不对就是png后缀
+            f1 = new File(pathname + "莫娜/7.png");
+        if (!f2.exists()) // 尝试jpg后缀不对就是png后缀
+            f2 = new File(pathname + "刻晴/9.png");
+        if (!f3.exists()) // 尝试jpg后缀不对就是png后缀
+            f3 = new File(pathname + "荧/1.png");
+
+        Image image1 = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f1);
+        Image image2 = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f2);
+        Image image3 = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f3);
+        event.getSubject().sendMessage(image1);
+        event.getSubject().sendMessage(image2);
+        event.getSubject().sendMessage(image3);
     }
 }
