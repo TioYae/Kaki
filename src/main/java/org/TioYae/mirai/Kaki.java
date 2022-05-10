@@ -35,7 +35,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.1")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.2")
                 .author("Tio Yae")
                 .build()
         );
@@ -394,8 +394,11 @@ public final class Kaki extends JavaPlugin {
         }
         DrawStatus ds = drawStatus.get(id);
         StringBuilder message = new StringBuilder().append("用户").append(id).append("的抽卡数据为: ");
-        for (String s : ds.role) {
-            message.append("\n").append(s).append(": ").append(ds.num.get(s));
+        if(ds == null) message.append("\n什么也没有");
+        else {
+            for (String s : ds.role) {
+                message.append("\n").append(s).append(": ").append(ds.num.get(s));
+            }
         }
         event.getSubject().sendMessage(message.toString());
     }
