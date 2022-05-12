@@ -104,13 +104,13 @@ public final class Kaki extends JavaPlugin {
                             long id = 0;
                             if (order.length > 1) {
                                 String mirai = event.getMessage().serializeToMiraiCode();
-                                System.out.println(mirai);
+//                                System.out.println(mirai);
                                 if (order[1].contains("[mirai:at:") && order[1].contains("]")) { // 如果是@
                                     int l = order[1].indexOf("at:") + 3, r = order[1].indexOf("]"); // 去掉@的包装
                                     String s = order[1].substring(l, r);
                                     if (s.matches("[0-9]+"))  // 判断是否为纯数字
                                         id = Long.parseLong(s);
-                                }
+                                } else if (order[1].matches("[0-9]+")) id = Long.parseLong(order[1]);
                             }
                             if (id == 0) id = event.getSender().getId();
                             drawDataSend(event, id);
@@ -394,7 +394,7 @@ public final class Kaki extends JavaPlugin {
         }
         DrawStatus ds = drawStatus.get(id);
         StringBuilder message = new StringBuilder().append("用户").append(id).append("的抽卡数据为: ");
-        if(ds == null) message.append("\n什么也没有");
+        if (ds.role == null) message.append("\n什么也没有");
         else {
             for (String s : ds.role) {
                 message.append("\n").append(s).append(": ").append(ds.num.get(s));
