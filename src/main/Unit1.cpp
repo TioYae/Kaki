@@ -9,7 +9,7 @@
 TForm1 *Form1;
 //---------------------------------------------------------------------------
 const  AL    =  10;  /* LENGTH OF IDENTIFIERS */
-const  NORW  =  14;  /* # OF RESERVED WORDS */
+const  NORW  =  19;  /* # OF RESERVED WORDS */
 const  TXMAX = 100;  /* LENGTH OF IDENTIFIER TABLE */
 const  NMAX  =  14;  /* MAX NUMBER OF DEGITS IN NUMBERS */
 const  AMAX  =2047;  /* MAXIMUM ADDRESS */
@@ -21,14 +21,17 @@ typedef enum  { NUL, IDENT, NUMBER, PLUS, MINUS, TIMES,
 	            LPAREN, RPAREN, COMMA, SEMICOLON, PERIOD,
 	            BECOMES, BEGINSYM, ENDSYM, IFSYM, THENSYM,
 	            WHILESYM, WRITESYM, READSYM, DOSYM, CALLSYM,
-	            CONSTSYM, VARSYM, PROCSYM, PROGSYM
+	            CONSTSYM, VARSYM, PROCSYM, PROGSYM,
+				ELSESYM,RETURNSYM,FORSYM,STEPSYM,UNTILSYM,TIMESBECOMES,SLASHBECOMES
         } SYMBOL;
 char *SYMOUT[] = {"NUL", "IDENT", "NUMBER", "PLUS", "MINUS", "TIMES",
 	    "SLASH", "ODDSYM", "EQL", "NEQ", "LSS", "LEQ", "GTR", "GEQ",
 	    "LPAREN", "RPAREN", "COMMA", "SEMICOLON", "PERIOD",
 	    "BECOMES", "BEGINSYM", "ENDSYM", "IFSYM", "THENSYM",
 	    "WHILESYM", "WRITESYM", "READSYM", "DOSYM", "CALLSYM",
-	    "CONSTSYM", "VARSYM", "PROCSYM", "PROGSYM" };
+	    "CONSTSYM", "VARSYM", "PROCSYM", "PROGSYM" ,
+        "ELSESYM","RETURNSYM","FORSYM","STEPSYM","UNTILSYM","TIMESBECOMES","SLASHBECOMES"
+};
 typedef  int *SYMSET; // SET OF SYMBOL;
 typedef  char ALFA[11];
 typedef  enum { CONSTANT, VARIABLE, PROCEDUR } OBJECTS ;
@@ -80,10 +83,9 @@ int SymIn(SYMBOL SYM, SYMSET S1) {
   return S1[SYM];
 }
 //---------------------------------------------------------------------------
-//ǰ�����ż��ͺ�����ż��ϳ�һ������
 SYMSET SymSetUnion(SYMSET S1, SYMSET S2) {
-  SYMSET S=(SYMSET)malloc(sizeof(int)*33); //Ϊ�������ַ�������ռ�
-  for (int i=0; i<33; i++)
+  SYMSET S=(SYMSET)malloc(sizeof(int)*40);
+  for (int i=0; i<40; i++)
 	if (S1[i] || S2[i]) S[i]=1;
 	else S[i]=0;
   return S;
@@ -91,64 +93,64 @@ SYMSET SymSetUnion(SYMSET S1, SYMSET S2) {
 //---------------------------------------------------------------------------
 SYMSET SymSetAdd(SYMBOL SY, SYMSET S) {
   SYMSET S1;
-  S1=(SYMSET)malloc(sizeof(int)*33);
-  for (int i=0; i<33; i++) S1[i]=S[i];
+  S1=(SYMSET)malloc(sizeof(int)*40);
+  for (int i=0; i<40; i++) S1[i]=S[i];
   S1[SY]=1;
   return S1;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNew(SYMBOL a) {
   SYMSET S; int i,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   S[a]=1;
   return S;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNew(SYMBOL a, SYMBOL b) {
   SYMSET S; int i,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   S[a]=1;  S[b]=1;
   return S;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNew(SYMBOL a, SYMBOL b, SYMBOL c) {
   SYMSET S; int i,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   S[a]=1;  S[b]=1; S[c]=1;
   return S;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNew(SYMBOL a, SYMBOL b, SYMBOL c, SYMBOL d) {
   SYMSET S; int i,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   S[a]=1;  S[b]=1; S[c]=1; S[d]=1;
   return S;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNew(SYMBOL a, SYMBOL b, SYMBOL c, SYMBOL d,SYMBOL e) {
   SYMSET S; int i,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   S[a]=1;  S[b]=1; S[c]=1; S[d]=1; S[e]=1;
   return S;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNew(SYMBOL a, SYMBOL b, SYMBOL c, SYMBOL d,SYMBOL e, SYMBOL f) {
   SYMSET S; int i,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   S[a]=1;  S[b]=1; S[c]=1; S[d]=1; S[e]=1; S[f]=1;
   return S;
 }
 //---------------------------------------------------------------------------
 SYMSET SymSetNULL() {
   SYMSET S; int i,n,k;
-  S=(SYMSET)malloc(sizeof(int)*33);
-  for (i=0; i<33; i++) S[i]=0;
+  S=(SYMSET)malloc(sizeof(int)*40);
+  for (i=0; i<40; i++) S[i]=0;
   return S;
 }
 //---------------------------------------------------------------------------
@@ -199,8 +201,7 @@ void GetSym() {
 	if (i-1 > J) SYM=WSYM[K];
 	else SYM=IDENT;
   }
-  else
-    if (CH>='0' && CH<='9') { /*NUMBER*/
+  else if (CH>='0' && CH<='9') { /*NUMBER*/
       K=0; NUM=0; SYM=NUMBER;
 	  do {
 	    NUM=10*NUM+(CH-'0');
@@ -208,8 +209,7 @@ void GetSym() {
       }while(CH>='0' && CH<='9');
 	  if (K>NMAX) Error(30);
     }
-    else
-      if (CH==':') {
+   else if (CH==':') {
 	    GetCh();
 		if (CH=='=') { SYM=BECOMES; GetCh(); }
 		else SYM=NUL;
@@ -227,6 +227,26 @@ void GetSym() {
 			if (CH=='=') { SYM=GEQ; GetCh(); }
 			else SYM=GTR;
           }
+
+		  else
+			  if(CH=='!'){
+			    GetCh();
+				if(CH=='='){SYM=NEQ;GetCh();}
+			  }
+          else
+			  if(CH=='*'){
+				GetCh();
+				if(CH=='='){SYM=TIMESBECOMES;
+				GetCh();
+				}else SYM=SSYM['*'];
+			  }
+		  else
+			  if(CH=='/'){
+				GetCh();
+				if(CH=='='){SYM=SLASHBECOMES;
+				GetCh();
+				}else SYM=SSYM['/'];
+			  }
 		  else { SYM=SSYM[CH]; GetCh(); }
 } /*GetSym()*/
 //---------------------------------------------------------------------------
@@ -445,11 +465,23 @@ void STATEMENT(SYMSET FSYS,int LEV,int &TX) {   /*STATEMENT*/
 	case IFSYM:
 		GetSym();
 		CONDITION(SymSetUnion(SymSetNew(THENSYM,DOSYM),FSYS),LEV,TX);
-		if (SYM==THENSYM) GetSym();
-		else Error(16);
-		CX1=CX;  GEN(JPC,0,0);
-		STATEMENT(FSYS,LEV,TX);  CODE[CX1].A=CX;
+                 CX1=CX;
+                 GEN(JPC,0,0);
+		if (SYM==THENSYM)
+                        GetSym();
+                else Error(16);
+		STATEMENT(SymSetUnion(SymSetNew(ELSESYM),FSYS),LEV,TX);
+                 if(SYM!=ELSESYM) CODE[CX1].A=CX;
+                 else
+                     {CX2=CX;
+                      GetSym();
+                      GEN(JMP,0,0);
+                      CODE[CX1].A =CX;
+                      STATEMENT(FSYS,LEV,TX);
+                      CODE[CX2].A=CX;
+                     }
 		break;
+
 	case BEGINSYM:
 		GetSym();
 		STATEMENT(SymSetUnion(SymSetNew(SEMICOLON,ENDSYM),FSYS),LEV,TX);
@@ -469,6 +501,34 @@ void STATEMENT(SYMSET FSYS,int LEV,int &TX) {   /*STATEMENT*/
 		STATEMENT(FSYS,LEV,TX);
 		GEN(JMP,0,CX1);
 		CODE[CX2].A=CX;
+		break;
+	case ELSESYM:
+		GetSym();
+		Form1->printfs("ʶ���else�ؼ���");
+		break;
+	case RETURNSYM:
+		GetSym();
+		Form1->printfs("ʶ���return�ؼ���");
+		break;
+    case FORSYM:
+		GetSym();
+		Form1->printfs("ʶ���for�ؼ���");
+		break;
+	case STEPSYM:
+		GetSym();
+		Form1->printfs("ʶ���step�ؼ���");
+		break;
+	case UNTILSYM:
+		GetSym();
+		Form1->printfs("ʶ���until�ؼ���");
+		break;
+	case TIMESBECOMES:
+        GetSym();
+		Form1->printfs("ʶ���*=�����");
+		break;
+    case SLASHBECOMES:
+        GetSym();
+		Form1->printfs("ʶ���/=�����");
 		break;
   }
   TEST(FSYS,SymSetNULL(),19);
@@ -586,18 +646,26 @@ void __fastcall TForm1::ButtonRunClick(TObject *Sender) {
   for (CH=' '; CH<='^'; CH++) SSYM[CH]=NUL;
   strcpy(KWORD[ 1],"BEGIN");    strcpy(KWORD[ 2],"CALL");
   strcpy(KWORD[ 3],"CONST");    strcpy(KWORD[ 4],"DO");
-  strcpy(KWORD[ 5],"END");      strcpy(KWORD[ 6],"IF");
-  strcpy(KWORD[ 7],"ODD");      strcpy(KWORD[ 8],"PROCEDURE");
-  strcpy(KWORD[ 9],"PROGRAM");  strcpy(KWORD[10],"READ");
-  strcpy(KWORD[11],"THEN");     strcpy(KWORD[12],"VAR");
-  strcpy(KWORD[13],"WHILE");    strcpy(KWORD[14],"WRITE");
+  strcpy(KWORD[ 5],"ELSE");     strcpy(KWORD[ 6],"END");
+  strcpy(KWORD[ 7],"FOR");      strcpy(KWORD[ 8],"IF");
+  strcpy(KWORD[ 9],"ODD");      strcpy(KWORD[10],"PROCEDURE");
+  strcpy(KWORD[11],"PROGRAM");  strcpy(KWORD[12],"READ");
+  strcpy(KWORD[13],"RETURN");   strcpy(KWORD[14],"STEP");
+  strcpy(KWORD[15],"THEN");     strcpy(KWORD[16],"UNTIL");
+  strcpy(KWORD[17],"VAR");      strcpy(KWORD[18],"WHILE");
+  strcpy(KWORD[19],"WRITE");
+
   WSYM[ 1]=BEGINSYM;   WSYM[ 2]=CALLSYM;
   WSYM[ 3]=CONSTSYM;   WSYM[ 4]=DOSYM;
-  WSYM[ 5]=ENDSYM;     WSYM[ 6]=IFSYM;
-  WSYM[ 7]=ODDSYM;     WSYM[ 8]=PROCSYM;
-  WSYM[ 9]=PROGSYM;    WSYM[10]=READSYM;
-  WSYM[11]=THENSYM;    WSYM[12]=VARSYM;
-  WSYM[13]=WHILESYM;   WSYM[14]=WRITESYM;
+  WSYM[ 5]=ELSESYM;    WSYM[ 6]=ENDSYM;
+  WSYM[ 7]=FORSYM;     WSYM[ 8]=IFSYM;
+  WSYM[ 9]=ODDSYM;     WSYM[10]=PROCSYM;
+  WSYM[11]=PROGSYM;    WSYM[12]=READSYM;
+  WSYM[13]=RETURNSYM;  WSYM[14]=STEPSYM;
+  WSYM[15]=THENSYM;    WSYM[16]=UNTILSYM;
+  WSYM[17]=VARSYM;     WSYM[18]=WHILESYM;
+  WSYM[19]=WRITESYM;
+
   SSYM['+']=PLUS;      SSYM['-']=MINUS;
   SSYM['*']=TIMES;     SSYM['/']=SLASH;
   SSYM['(']=LPAREN;    SSYM[')']=RPAREN;
@@ -609,10 +677,10 @@ void __fastcall TForm1::ButtonRunClick(TObject *Sender) {
   strcpy(MNEMONIC[CAL],"CAL");   strcpy(MNEMONIC[INI],"INI");
   strcpy(MNEMONIC[JMP],"JMP");   strcpy(MNEMONIC[JPC],"JPC");
 
-  DECLBEGSYS=(int*)malloc(sizeof(int)*33);
-  STATBEGSYS=(int*)malloc(sizeof(int)*33);
-  FACBEGSYS =(int*)malloc(sizeof(int)*33);
-  for(int j=0; j<33; j++) {
+  DECLBEGSYS=(int*)malloc(sizeof(int)*40);
+  STATBEGSYS=(int*)malloc(sizeof(int)*40);
+  FACBEGSYS =(int*)malloc(sizeof(int)*40);
+  for(int j=0; j<40; j++) {
 	DECLBEGSYS[j]=0;  STATBEGSYS[j]=0;  FACBEGSYS[j] =0;
   }
   DECLBEGSYS[CONSTSYM]=1;
