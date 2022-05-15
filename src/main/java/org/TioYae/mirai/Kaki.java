@@ -7,6 +7,7 @@ import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
 import net.mamoe.mirai.contact.Group;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
+import net.mamoe.mirai.event.events.BotOnlineEvent;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.message.data.*;
 import org.jetbrains.annotations.NotNull;
@@ -37,7 +38,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.3")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.4")
                 .author("Tio Yae")
                 .build()
         );
@@ -50,24 +51,7 @@ public final class Kaki extends JavaPlugin {
         drawStatus = draw_io.loadDailyDrawStatus(System.getProperty("user.dir") + "/config/org.kaki/drawStatus.txt");
         if (drawStatus == null) logAdd("读取抽卡数据失败");
 
-        // 给全部启用功能的群发送bot上线提醒
-        for (long i : botId) {
-            try {
-                Bot bot = Bot.getInstance(i);
-                for (long j : group) {
-                    try {
-                        bot.getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
-                    } catch (NoSuchElementException e) {
-                        e.printStackTrace();
-                        logAdd("未找到群组: " + j);
-                    }
-                }
-                break;
-            } catch (NoSuchElementException e) {
-                e.printStackTrace();
-                logAdd("未找到bot: " + i);
-            }
-        }
+
     }
 
     @Override
@@ -77,6 +61,18 @@ public final class Kaki extends JavaPlugin {
 
         // 交互式控制台（开发者专用）
         GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::console);
+
+        // 给全部启用功能的群发送bot上线提醒
+        GlobalEventChannel.INSTANCE.subscribeAlways(BotOnlineEvent.class, botOnlineEvent -> {
+            for (long j : group) {
+                try {
+                    botOnlineEvent.getBot().getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
+                } catch (NoSuchElementException e) {
+                    e.printStackTrace();
+                    logAdd("未找到群组: " + j);
+                }
+            }
+        });
     }
 
     // 读取yaml文件配置
@@ -377,17 +373,19 @@ public final class Kaki extends JavaPlugin {
                         for (long i : botId) {
                             try {
                                 Bot bot = Bot.getInstance(i);
-                                for (long j : group) {
-                                    try {
-                                        bot.getGroupOrFail(j).sendMessage("Kaki要睡觉啦，晚安！");
-                                    } catch (NoSuchElementException e) {
-                                        e.printStackTrace();
-                                        logAdd("未找到群组: " + j);
+                                if (bot.isOnline()) {
+                                    for (long j : group) {
+                                        try {
+                                            bot.getGroupOrFail(j).sendMessage("Kaki要睡觉啦，晚安！");
+                                        } catch (NoSuchElementException e) {
+                                            e.printStackTrace();
+                                            logAdd("未找到群组: " + j);
+                                        }
                                     }
+                                    mainListener.complete(); // 停止主监听
+                                    mainListener = null;
+                                    break;
                                 }
-                                mainListener.complete(); // 停止主监听
-                                mainListener = null;
-                                break;
                             } catch (NoSuchElementException e) {
                                 e.printStackTrace();
                                 logAdd("未找到bot: " + i);
@@ -402,15 +400,17 @@ public final class Kaki extends JavaPlugin {
                         for (long i : botId) {
                             try {
                                 Bot bot = Bot.getInstance(i);
-                                for (long j : group) {
-                                    try {
-                                        bot.getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
-                                    } catch (NoSuchElementException e) {
-                                        e.printStackTrace();
-                                        logAdd("未找到群组: " + j);
+                                if (bot.isOnline()) {
+                                    for (long j : group) {
+                                        try {
+                                            bot.getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
+                                        } catch (NoSuchElementException e) {
+                                            e.printStackTrace();
+                                            logAdd("未找到群组: " + j);
+                                        }
                                     }
+                                    break;
                                 }
-                                break;
                             } catch (NoSuchElementException e) {
                                 e.printStackTrace();
                                 logAdd("未找到bot: " + i);
