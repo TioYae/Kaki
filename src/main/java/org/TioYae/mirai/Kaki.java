@@ -1,8 +1,10 @@
 package org.TioYae.mirai;
 
+import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
+import net.mamoe.mirai.contact.Group;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
 import net.mamoe.mirai.event.events.MessageEvent;
@@ -35,7 +37,7 @@ public final class Kaki extends JavaPlugin {
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
 
     private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.2")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.3")
                 .author("Tio Yae")
                 .build()
         );
@@ -47,6 +49,25 @@ public final class Kaki extends JavaPlugin {
 
         drawStatus = draw_io.loadDailyDrawStatus(System.getProperty("user.dir") + "/config/org.kaki/drawStatus.txt");
         if (drawStatus == null) logAdd("读取抽卡数据失败");
+
+        // 给全部启用功能的群发送bot上线提醒
+        for (long i : botId) {
+            try {
+                Bot bot = Bot.getInstance(i);
+                for (long j : group) {
+                    try {
+                        bot.getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
+                    } catch (NoSuchElementException e) {
+                        e.printStackTrace();
+                        logAdd("未找到群组: " + j);
+                    }
+                }
+                break;
+            } catch (NoSuchElementException e) {
+                e.printStackTrace();
+                logAdd("未找到bot: " + i);
+            }
+        }
     }
 
     @Override
@@ -55,76 +76,7 @@ public final class Kaki extends JavaPlugin {
         mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
 
         // 交互式控制台（开发者专用）
-        GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, event -> {
-            if (event.getSender().getId() == masterId) {
-                boolean at = isAt(event);
-                String str = event.getMessage().serializeToMiraiCode();
-                if (at || str.startsWith(">") || str.startsWith(" ")) {
-                    if (at) {
-                        int t = str.indexOf("]") + 1;
-                        if (str.length() > t && str.charAt(t) == ' ')
-                            str = str.substring(t + 1);
-                        else
-                            str = str.substring(t);
-                    } else str = str.substring(1);
-                    String[] order = str.split(" ");
-                    switch (order[0]) {
-                        case "重启":
-                        case "relogin":
-                        case "restart":
-                            mainListener.complete();
-                            usersLock.clear();
-                            mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
-                            event.getSubject().sendMessage("重启成功");
-                            break;
-                        case "日志":
-                        case "log":
-                        case "error":
-                            if (order.length > 1 && order[1].matches("[0-9]+"))
-                                logSend(event, Integer.parseInt(order[1]));
-                            else
-                                logSend(event, 10);
-                            break;
-                        case "用户锁":
-                        case "lock":
-                        case "usersLock":
-                            event.getSubject().sendMessage("用户锁如下：\n" + usersLock.toString());
-                            break;
-                        case "黑名单":
-                        case "black":
-                            event.getSubject().sendMessage("黑名单如下：\n" + black.toString());
-                            break;
-                        case "白名单":
-                        case "white":
-                            event.getSubject().sendMessage("白名单如下：\n" + white.toString());
-                            break;
-                        case "抽卡数据":
-                        case "drawData":
-                        case "dd":
-                            long id = 0;
-                            if (order.length > 1) {
-                                String mirai = event.getMessage().serializeToMiraiCode();
-//                                System.out.println(mirai);
-                                if (order[1].contains("[mirai:at:") && order[1].contains("]")) { // 如果是@
-                                    int l = order[1].indexOf("at:") + 3, r = order[1].indexOf("]"); // 去掉@的包装
-                                    String s = order[1].substring(l, r);
-                                    if (s.matches("[0-9]+"))  // 判断是否为纯数字
-                                        id = Long.parseLong(s);
-                                } else if (order[1].matches("[0-9]+")) id = Long.parseLong(order[1]);
-                            }
-                            if (id == 0) id = event.getSender().getId();
-                            drawDataSend(event, id);
-                            break;
-                        case "测试":
-                        case "test":
-                            test(event);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        });
+        GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::console);
     }
 
     // 读取yaml文件配置
@@ -358,6 +310,129 @@ public final class Kaki extends JavaPlugin {
         respond(event);
     }
 
+    // 控制台监听方法
+    void console(MessageEvent event) {
+        if (event.getSender().getId() == masterId) {
+            boolean at = isAt(event);
+            String str = event.getMessage().serializeToMiraiCode();
+            if (at || str.startsWith(">") || str.startsWith(" ")) {
+                if (at) {
+                    int t = str.indexOf("]") + 1;
+                    if (str.length() > t && str.charAt(t) == ' ')
+                        str = str.substring(t + 1);
+                    else
+                        str = str.substring(t);
+                } else str = str.substring(1);
+                String[] order = str.split(" ");
+                switch (order[0]) {
+                    case "重启":
+                    case "relogin":
+                    case "restart":
+                        mainListener.complete();
+                        usersLock.clear();
+                        mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
+                        event.getSubject().sendMessage("重启成功");
+                        break;
+                    case "日志":
+                    case "log":
+                    case "error":
+                        if (order.length > 1 && order[1].matches("[0-9]+"))
+                            logSend(event, Integer.parseInt(order[1]));
+                        else
+                            logSend(event, 10);
+                        break;
+                    case "用户锁":
+                    case "lock":
+                    case "usersLock":
+                        event.getSubject().sendMessage("用户锁如下：\n" + usersLock.toString());
+                        break;
+                    case "黑名单":
+                    case "black":
+                        event.getSubject().sendMessage("黑名单如下：\n" + black.toString());
+                        break;
+                    case "白名单":
+                    case "white":
+                        event.getSubject().sendMessage("白名单如下：\n" + white.toString());
+                        break;
+                    case "抽卡数据":
+                    case "drawData":
+                    case "dd":
+                        long id = 0;
+                        if (order.length > 1) {
+                            String mirai = event.getMessage().serializeToMiraiCode();
+//                                System.out.println(mirai);
+                            if (order[1].contains("[mirai:at:") && order[1].contains("]")) { // 如果是@
+                                int l = order[1].indexOf("at:") + 3, r = order[1].indexOf("]"); // 去掉@的包装
+                                String s = order[1].substring(l, r);
+                                if (s.matches("[0-9]+"))  // 判断是否为纯数字
+                                    id = Long.parseLong(s);
+                            } else if (order[1].matches("[0-9]+")) id = Long.parseLong(order[1]);
+                        }
+                        if (id == 0) id = event.getSender().getId();
+                        drawDataSend(event, id);
+                        break;
+                    case "睡吧":
+                    case "sleep":
+                        if (mainListener == null) break; // 主监听非空时允许执行
+                        for (long i : botId) {
+                            try {
+                                Bot bot = Bot.getInstance(i);
+                                for (long j : group) {
+                                    try {
+                                        bot.getGroupOrFail(j).sendMessage("Kaki要睡觉啦，晚安！");
+                                    } catch (NoSuchElementException e) {
+                                        e.printStackTrace();
+                                        logAdd("未找到群组: " + j);
+                                    }
+                                }
+                                mainListener.complete(); // 停止主监听
+                                mainListener = null;
+                                break;
+                            } catch (NoSuchElementException e) {
+                                e.printStackTrace();
+                                logAdd("未找到bot: " + i);
+                            }
+                        }
+                        break;
+                    case "睡够没":
+                    case "起床":
+                    case "wake":
+                        if (mainListener != null) break; // 主监听为空时允许执行
+                        mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
+                        for (long i : botId) {
+                            try {
+                                Bot bot = Bot.getInstance(i);
+                                for (long j : group) {
+                                    try {
+                                        bot.getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
+                                    } catch (NoSuchElementException e) {
+                                        e.printStackTrace();
+                                        logAdd("未找到群组: " + j);
+                                    }
+                                }
+                                break;
+                            } catch (NoSuchElementException e) {
+                                e.printStackTrace();
+                                logAdd("未找到bot: " + i);
+                            }
+                        }
+                        break;
+                    case "图":
+                    case "picture":
+                        if (order.length > 2) sendPicture(event, order[1], order[2]);
+                        else event.getSubject().sendMessage("参数输入有误");
+                        break;
+                    case "测试":
+                    case "test":
+                        test(event);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
     // 添加错误记录
     void logAdd(String err) {
         System.out.println(err);
@@ -519,6 +594,9 @@ public final class Kaki extends JavaPlugin {
                             "黑名单|black: 查看黑名单\n" +
                             "白名单|white: 查看黑名单\n" +
                             "抽卡数据|drawData|dd: 查询用户xxx的抽卡数据\n" +
+                            "睡吧|sleep: 关闭主监听，给所有群发送bot离线提醒\n" +
+                            "睡够没|起床|wake: 启用主监听，给所有群发送bot上线提醒\n" +
+                            "图|picture: 查看指定角色的指定图片\n" +
                             "\n仅开发者可用";
                 } else {
                     ans = "您没有权限查看控制台指令";
@@ -901,6 +979,26 @@ public final class Kaki extends JavaPlugin {
 
         event.getSubject().sendMessage(messages.build());
         if (!draw_io.saveDailyDrawStatus(drawStatus)) logAdd("保存抽卡数据失败");
+    }
+
+    // 发送指定图片
+    void sendPicture(MessageEvent event, String name, String number) {
+        if (name.equals("") || !number.matches("[0-9]+")) {
+            event.getSubject().sendMessage("参数输入有误");
+            return;
+        }
+
+        String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/";
+        File f = new File(pathname + name + "\\" + number + ".jpg");
+        if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+            f = new File(pathname + name + "\\" + number + ".png");
+        if (!f.exists()) { // png也打不开
+            event.getSubject().sendMessage("图片读取失败");
+            return;
+        }
+
+        Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
+        event.getSubject().sendMessage(image);
     }
 
     // 测试
