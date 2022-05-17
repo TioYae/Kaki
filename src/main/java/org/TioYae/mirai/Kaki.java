@@ -5,10 +5,11 @@ import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
 import net.mamoe.mirai.contact.Group;
+import net.mamoe.mirai.contact.Member;
+import net.mamoe.mirai.contact.NormalMember;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
-import net.mamoe.mirai.event.events.BotOnlineEvent;
-import net.mamoe.mirai.event.events.MessageEvent;
+import net.mamoe.mirai.event.events.*;
 import net.mamoe.mirai.message.data.*;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
@@ -37,8 +38,8 @@ public final class Kaki extends JavaPlugin {
     Draw_IO draw_io = new Draw_IO(); // 抽卡记录存取对象
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
 
-    private Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.4")
+    public Kaki() {
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.5")
                 .author("Tio Yae")
                 .build()
         );
@@ -50,8 +51,6 @@ public final class Kaki extends JavaPlugin {
 
         drawStatus = draw_io.loadDailyDrawStatus(System.getProperty("user.dir") + "/config/org.kaki/drawStatus.txt");
         if (drawStatus == null) logAdd("读取抽卡数据失败");
-
-
     }
 
     @Override
@@ -290,13 +289,10 @@ public final class Kaki extends JavaPlugin {
                         else event.getSubject().sendMessage("创建文件夹失败");
                     }
                     break;
-                case "图片重载":
-                    fileNum.clear();
-                    event.getSubject().sendMessage("图片重载成功");
-                    break;
-                case "draw":
                 case "抽卡":
-                    dailyDrawCard(event);
+                    boolean word = false;
+                    if (content.contains("w") || content.contains("W")) word = true;
+                    dailyDrawCard(event, word);
                     break;
                 default:
                     System.out.println("default in \">\" order");
@@ -349,6 +345,11 @@ public final class Kaki extends JavaPlugin {
                     case "白名单":
                     case "white":
                         event.getSubject().sendMessage("白名单如下：\n" + white.toString());
+                        break;
+                    case "图片重载":
+                    case "reload":
+                        fileNum.clear();
+                        event.getSubject().sendMessage("图片重载成功");
                         break;
                     case "抽卡数据":
                     case "drawData":
@@ -494,7 +495,7 @@ public final class Kaki extends JavaPlugin {
         if (black != null && black.contains(id)) return;
 
         String content = event.getMessage().contentToString();
-        if (content.contains("早上好")) {
+        /*if (content.contains("早上好")) {
             event.getSubject().sendMessage("早上好");
         } else if (content.contains("上午好")) {
             event.getSubject().sendMessage("上午好");
@@ -512,7 +513,7 @@ public final class Kaki extends JavaPlugin {
             event.getSubject().sendMessage("午安");
         } else if (content.contains("晚安")) {
             event.getSubject().sendMessage("晚安");
-        }
+        }*/
 
         boolean at = isAt(event);
         //带称呼或@触发
@@ -582,7 +583,8 @@ public final class Kaki extends JavaPlugin {
                 break;
             case "抽卡":
                 ans = "「抽卡」指令：\n" +
-                        "每位用户每天可以抽一次原神角色，角色数量区间为[0, 3]";
+                        "每位用户每天可以抽一次原神角色，角色数量区间为[0, 3\n" +
+                        "在指令后追加参数「W」或「w」可切换成文字回复";
                 break;
             case "控制台":
             case "console":
@@ -593,6 +595,7 @@ public final class Kaki extends JavaPlugin {
                             "用户锁|lock|usersLock: 查询用户锁哈希表\n" +
                             "黑名单|black: 查看黑名单\n" +
                             "白名单|white: 查看黑名单\n" +
+                            "图片重载|reload: 清除图片读取记录\n" +
                             "抽卡数据|drawData|dd: 查询用户xxx的抽卡数据\n" +
                             "睡吧|sleep: 关闭主监听，给所有群发送bot离线提醒\n" +
                             "睡够没|起床|wake: 启用主监听，给所有群发送bot上线提醒\n" +
@@ -925,7 +928,7 @@ public final class Kaki extends JavaPlugin {
     }
 
     // 每日抽卡
-    void dailyDrawCard(MessageEvent event) {
+    void dailyDrawCard(MessageEvent event, boolean word) {
         DrawStatus status;
         long id = event.getSender().getId();
         if (drawStatus == null) drawStatus = new HashMap<>();
@@ -961,18 +964,22 @@ public final class Kaki extends JavaPlugin {
         } else {
             messages.append("恭喜你，抽到以下角色：\n");
             for (String s : name) {
-                int i = status.num.get(s);
-                String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/" + s + "/" + i;
-                File f = new File(pathname + ".jpg");
-                if (!f.exists()) // 尝试jpg后缀不对就是png后缀
-                    f = new File(pathname + ".png");
-
-                if (f.exists()) {
-                    Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
-                    messages.append(s).append(": \n").append(image).append("\n");
+                if (word) {
+                    messages.append("\n").append(s);
                 } else {
-                    logAdd("读取图片失败：" + s + i);
-                    messages.append(s).append(": \n图片读取失败\n");
+                    int i = status.num.get(s);
+                    String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/" + s + "/" + i;
+                    File f = new File(pathname + ".jpg");
+                    if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+                        f = new File(pathname + ".png");
+
+                    if (f.exists()) {
+                        Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
+                        messages.append(s).append(": \n").append(image).append("\n");
+                    } else {
+                        logAdd("读取图片失败：" + s + i);
+                        messages.append(s).append(": \n图片读取失败\n");
+                    }
                 }
             }
         }
