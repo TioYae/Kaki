@@ -4,9 +4,6 @@ import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
-import net.mamoe.mirai.contact.Group;
-import net.mamoe.mirai.contact.Member;
-import net.mamoe.mirai.contact.NormalMember;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
 import net.mamoe.mirai.event.events.*;
@@ -37,9 +34,10 @@ public final class Kaki extends JavaPlugin {
     HashMap<Long, DrawStatus> drawStatus; // 每日抽卡记录
     Draw_IO draw_io = new Draw_IO(); // 抽卡记录存取对象
     Queue<String> logMessages = new ArrayDeque<>(); // 日志记录表，默认大小为50，可到logAdd处修改
+    Bot normalBot = null; // 记录当前bot
 
     public Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.5")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.6")
                 .author("Tio Yae")
                 .build()
         );
@@ -63,13 +61,9 @@ public final class Kaki extends JavaPlugin {
 
         // 给全部启用功能的群发送bot上线提醒
         GlobalEventChannel.INSTANCE.subscribeAlways(BotOnlineEvent.class, botOnlineEvent -> {
-            for (long j : group) {
-                try {
-                    botOnlineEvent.getBot().getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
-                } catch (NoSuchElementException e) {
-                    e.printStackTrace();
-                    logAdd("未找到群组: " + j);
-                }
+            if (normalBot == null || normalBot.getId() != botOnlineEvent.getBot().getId()) { // 上号or切号提示，掉线重连不提示
+                normalBot = botOnlineEvent.getBot();
+                sendToAllGroup(normalBot, "Kaki睡醒啦，快来找我玩！");
             }
         });
     }
@@ -375,14 +369,7 @@ public final class Kaki extends JavaPlugin {
                             try {
                                 Bot bot = Bot.getInstance(i);
                                 if (bot.isOnline()) {
-                                    for (long j : group) {
-                                        try {
-                                            bot.getGroupOrFail(j).sendMessage("Kaki要睡觉啦，晚安！");
-                                        } catch (NoSuchElementException e) {
-                                            e.printStackTrace();
-                                            logAdd("未找到群组: " + j);
-                                        }
-                                    }
+                                    sendToAllGroup(bot, "Kaki要睡觉啦，晚安！");
                                     mainListener.complete(); // 停止主监听
                                     mainListener = null;
                                     break;
@@ -402,14 +389,7 @@ public final class Kaki extends JavaPlugin {
                             try {
                                 Bot bot = Bot.getInstance(i);
                                 if (bot.isOnline()) {
-                                    for (long j : group) {
-                                        try {
-                                            bot.getGroupOrFail(j).sendMessage("Kaki睡醒啦，快来找我玩！");
-                                        } catch (NoSuchElementException e) {
-                                            e.printStackTrace();
-                                            logAdd("未找到群组: " + j);
-                                        }
-                                    }
+                                    sendToAllGroup(bot, "Kaki睡醒啦，快来找我玩！");
                                     break;
                                 }
                             } catch (NoSuchElementException e) {
@@ -469,6 +449,11 @@ public final class Kaki extends JavaPlugin {
             return;
         }
         DrawStatus ds = drawStatus.get(id);
+        String date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
+        if (!date.equals(ds.date)) { // 日期不一样，即今日未抽卡
+            event.getSubject().sendMessage("未找到用户" + id + "的抽卡数据");
+            return;
+        }
         StringBuilder message = new StringBuilder().append("用户").append(id).append("的抽卡数据为: ");
         if (ds.role == null) message.append("\n什么也没有");
         else {
@@ -1006,6 +991,18 @@ public final class Kaki extends JavaPlugin {
 
         Image image = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f);
         event.getSubject().sendMessage(image);
+    }
+
+    // 给每个群组发消息
+    void sendToAllGroup(Bot bot, String message) {
+        for (long j : group) {
+            try {
+                bot.getGroupOrFail(j).sendMessage(message);
+            } catch (NoSuchElementException e) {
+                e.printStackTrace();
+                logAdd("未找到群组: " + j);
+            }
+        }
     }
 
     // 测试

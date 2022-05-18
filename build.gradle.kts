@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "org.example"
-version = "1.6.5"
+version = "1.6.6"
 
 repositories {
     maven("https://maven.aliyun.com/repository/public")
