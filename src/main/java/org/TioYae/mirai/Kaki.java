@@ -37,7 +37,7 @@ public final class Kaki extends JavaPlugin {
     Bot normalBot = null; // 记录当前bot
 
     public Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.6")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.7")
                 .author("Tio Yae")
                 .build()
         );
@@ -661,7 +661,9 @@ public final class Kaki extends JavaPlugin {
         int i = random.nextInt(imageNum) + 1;
         String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/" + game + "/" + answer[0] + "/" + i;
         File f = new File(pathname + ".jpg");
-        if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+        if (!f.exists()) // 尝试jpg后缀不对就试试jpeg后缀
+            f = new File(pathname + ".jpeg");
+        if (!f.exists()) // 尝试jpeg后缀不对就是png后缀
             f = new File(pathname + ".png");
 
         StringBuilder str = new StringBuilder();
@@ -955,7 +957,9 @@ public final class Kaki extends JavaPlugin {
                     int i = status.num.get(s);
                     String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/" + s + "/" + i;
                     File f = new File(pathname + ".jpg");
-                    if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+                    if (!f.exists()) // 尝试jpg后缀不对就试试jpeg后缀
+                        f = new File(pathname + ".jpeg");
+                    if (!f.exists()) // 尝试jpeg后缀不对就是png后缀
                         f = new File(pathname + ".png");
 
                     if (f.exists()) {
@@ -982,7 +986,9 @@ public final class Kaki extends JavaPlugin {
 
         String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/";
         File f = new File(pathname + name + "\\" + number + ".jpg");
-        if (!f.exists()) // 尝试jpg后缀不对就是png后缀
+        if (!f.exists()) // 尝试jpg后缀不对就试试jpeg后缀
+            f = new File(pathname + name + "\\" + number + ".jpeg");
+        if (!f.exists()) // 尝试jpeg后缀不对就是png后缀
             f = new File(pathname + name + "\\" + number + ".png");
         if (!f.exists()) { // png也打不开
             event.getSubject().sendMessage("图片读取失败");
