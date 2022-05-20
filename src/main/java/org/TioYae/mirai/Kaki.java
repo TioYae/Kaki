@@ -1,13 +1,16 @@
 package org.TioYae.mirai;
 
 import net.mamoe.mirai.Bot;
+import net.mamoe.mirai.BotFactory;
 import net.mamoe.mirai.console.extension.PluginComponentStorage;
 import net.mamoe.mirai.console.plugin.jvm.JavaPlugin;
 import net.mamoe.mirai.console.plugin.jvm.JvmPluginDescriptionBuilder;
+import net.mamoe.mirai.contact.Contact;
 import net.mamoe.mirai.event.GlobalEventChannel;
 import net.mamoe.mirai.event.Listener;
 import net.mamoe.mirai.event.events.*;
 import net.mamoe.mirai.message.data.*;
+import net.mamoe.mirai.utils.BotConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -25,6 +28,7 @@ public final class Kaki extends JavaPlugin {
     public static List<Long> white; // 白名单
     public static List<Long> group; // 启用功能的群组
     public static List<Long> botId; // bot备用列表
+    public static List<String> botPassword; // bot密码列表
     public static long masterId; // 最高管理者id
 
     boolean roleLock = false; // 角色添加(文件IO)时上锁
@@ -37,7 +41,7 @@ public final class Kaki extends JavaPlugin {
     Bot normalBot = null; // 记录当前bot
 
     public Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.7")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.8")
                 .author("Tio Yae")
                 .build()
         );
@@ -115,6 +119,7 @@ public final class Kaki extends JavaPlugin {
         }
         masterId = config.getMasterId();
         botId = config.getBotId();
+        botPassword = config.getBotPassword();
         black = config.getList_Black();
         white = config.getList_White();
         group = config.getList_Group();
@@ -310,6 +315,8 @@ public final class Kaki extends JavaPlugin {
                         str = str.substring(t);
                 } else str = str.substring(1);
                 String[] order = str.split(" ");
+                long id = 0;
+
                 switch (order[0]) {
                     case "重启":
                     case "relogin":
@@ -348,17 +355,7 @@ public final class Kaki extends JavaPlugin {
                     case "抽卡数据":
                     case "drawData":
                     case "dd":
-                        long id = 0;
-                        if (order.length > 1) {
-                            String mirai = event.getMessage().serializeToMiraiCode();
-//                                System.out.println(mirai);
-                            if (order[1].contains("[mirai:at:") && order[1].contains("]")) { // 如果是@
-                                int l = order[1].indexOf("at:") + 3, r = order[1].indexOf("]"); // 去掉@的包装
-                                String s = order[1].substring(l, r);
-                                if (s.matches("[0-9]+"))  // 判断是否为纯数字
-                                    id = Long.parseLong(s);
-                            } else if (order[1].matches("[0-9]+")) id = Long.parseLong(order[1]);
-                        }
+                        if (order.length > 1) id = getIdFromAt(order[1]);
                         if (id == 0) id = event.getSender().getId();
                         drawDataSend(event, id);
                         break;
@@ -858,6 +855,7 @@ public final class Kaki extends JavaPlugin {
                 }
                 event.getSubject().sendMessage("请输入「名称,星级,性别,属性,武器,归属」，用中/英文逗号隔开，不支持空格");
                 person.listener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, e -> {
+                    if (e.getMessage().contentToString().contains("添加原神角色")) return;
                     // 判断为同一个人的消息才执行
                     if (e.getSender().getId() == person.id) {
                         roleLock = true; // MessageEvent
@@ -1011,22 +1009,20 @@ public final class Kaki extends JavaPlugin {
         }
     }
 
+    // 在@里获得id
+    long getIdFromAt(String message) {
+        if (message.contains("[mirai:at:") && message.contains("]")) { // 如果是@
+            int l = message.indexOf("at:") + 3, r = message.indexOf("]"); // 去掉@的包装
+            String s = message.substring(l, r);
+            if (s.matches("[0-9]+"))  // 判断是否为纯数字
+                return Long.parseLong(s);
+        } else if (message.matches("[0-9]+")) return Long.parseLong(message);
+        return 0;
+    }
+
     // 测试
     void test(MessageEvent event) {
-        String pathname = System.getProperty("user.dir") + "/config/org.kaki/picture/原神/";
-        File f1 = new File(pathname + "莫娜/7.jpg"), f2 = new File(pathname + "刻晴/9.jpg"), f3 = new File(pathname + "荧/1.jpg");
-        if (!f1.exists()) // 尝试jpg后缀不对就是png后缀
-            f1 = new File(pathname + "莫娜/7.png");
-        if (!f2.exists()) // 尝试jpg后缀不对就是png后缀
-            f2 = new File(pathname + "刻晴/9.png");
-        if (!f3.exists()) // 尝试jpg后缀不对就是png后缀
-            f3 = new File(pathname + "荧/1.png");
+//        String regex = "(\\d|\\D)*((ht|f)tp(s?)://[0-9a-zA-Z]([-.\\w]*[0-9a-zA-Z])*(:(0-9)*)*(/?)([a-zA-Z0-9\\-.?,'/\\\\&%+$#_=]*)?)(\\d|\\D)*";
 
-        Image image1 = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f1);
-        Image image2 = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f2);
-        Image image3 = net.mamoe.mirai.contact.Contact.uploadImage(event.getSubject(), f3);
-        event.getSubject().sendMessage(image1);
-        event.getSubject().sendMessage(image2);
-        event.getSubject().sendMessage(image3);
     }
 }
