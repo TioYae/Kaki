@@ -41,7 +41,7 @@ public final class Kaki extends JavaPlugin {
     Bot normalBot = null; // 记录当前bot
 
     public Kaki() {
-        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.8")
+        super(new JvmPluginDescriptionBuilder("org.TioYae.mirai.Kaki", "1.6.9")
                 .author("Tio Yae")
                 .build()
         );
@@ -362,18 +362,18 @@ public final class Kaki extends JavaPlugin {
                     case "睡吧":
                     case "sleep":
                         if (mainListener == null) break; // 主监听非空时允许执行
-                        for (long i : botId) {
-                            try {
-                                Bot bot = Bot.getInstance(i);
-                                if (bot.isOnline()) {
-                                    sendToAllGroup(bot, "Kaki要睡觉啦，晚安！");
-                                    mainListener.complete(); // 停止主监听
-                                    mainListener = null;
-                                    break;
+                        if (normalBot.isOnline()) {
+                            for (long j : group) {
+                                try {
+                                    normalBot.getGroupOrFail(j).sendMessage("Kaki要睡觉啦，晚安！");
+                                    if(mainListener!=null) {
+                                        mainListener.complete(); // 停止主监听
+                                        mainListener = null;
+                                    }
+                                } catch (NoSuchElementException e) {
+                                    e.printStackTrace();
+                                    logAdd("未找到群组: " + j);
                                 }
-                            } catch (NoSuchElementException e) {
-                                e.printStackTrace();
-                                logAdd("未找到bot: " + i);
                             }
                         }
                         break;
@@ -381,18 +381,9 @@ public final class Kaki extends JavaPlugin {
                     case "起床":
                     case "wake":
                         if (mainListener != null) break; // 主监听为空时允许执行
-                        mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
-                        for (long i : botId) {
-                            try {
-                                Bot bot = Bot.getInstance(i);
-                                if (bot.isOnline()) {
-                                    sendToAllGroup(bot, "Kaki睡醒啦，快来找我玩！");
-                                    break;
-                                }
-                            } catch (NoSuchElementException e) {
-                                e.printStackTrace();
-                                logAdd("未找到bot: " + i);
-                            }
+                        if (normalBot.isOnline()) {
+                            mainListener = GlobalEventChannel.INSTANCE.subscribeAlways(MessageEvent.class, this::hear);
+                            sendToAllGroup(normalBot, "Kaki睡醒啦，快来找我玩！");
                         }
                         break;
                     case "图":
